@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Sentri — Emergency alerts, even with no app.</title>
+  <meta name="description" content="Sentri turns your phone into a siren, a beacon and a lifeline: loudest alarm, live location and alerts only to contacts you accepted. Free safety tools. Android app and free iPhone lock-screen alerts." />
+  <meta name="theme-color" content="#0B0C10" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="landing.css?v=12" />
+  <script src="landing.js?v=12" defer></script>
+</head>
+<body>
+  <!-- Exact Sentri app logo: indigo tile, mint wave mark -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <clipPath id="sentri-oval"><ellipse cx="50" cy="50" rx="50" ry="50" /></clipPath>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-siren" viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3Z M12 9v5 M12 17.5h.01" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" fill="currentColor"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z M8.5 12l2.5 2.5 4.5-5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </defs></svg>
+
+  <header class="nav">
+    <a class="brand" href="index.html" aria-label="Sentri home">
+      <svg class="mark" viewBox="0 0 100 100" aria-hidden="true">
+        <rect width="100" height="100" rx="20" fill="#0E08A3" />
+        <g clip-path="url(#sentri-oval)" fill="#ffffff">
+          <polygon points="0,0 100,0 100,17 0,23" />
+          <polygon points="0,28 100,41 100,69 0,53" />
+          <polygon points="0,100 0,87 100,74 100,100" />
+        </g>
+      </svg>
+      <span>sentri</span>
+    </a>
+    <nav class="links">
+      <a href="#about">About</a>
+      <a href="#safety">Safety</a>
+      <a href="#how">How it works</a>
+      <a href="#features">Features</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <a class="btn btn-mint nav-cta" href="#download"><span>Get the app</span><i>↗</i></a>
+  </header>
+
+  <main>
+    <!-- HERO — crisp dark layout, real night photo panel -->
+    <section class="hero">
+      <div class="hero-frame">
+        <img class="hero-img" src="https://images.pexels.com/photos/12898972/pexels-photo-12898972.jpeg?cs=tinysrgb&w=2000" alt="Confident woman smiling while using her phone outdoors" />
+        <div class="hero-shade"></div>
+        <div class="hero-body">
+          <p class="eyebrow light">Personal safety / 001</p>
+          <h1>When it gets dark,<br /><em>be loud.</em></h1>
+          <p class="hero-copy">One tap. The loudest alarm. Your live location. Only your people. That's Sentri — safety you can feel before you can explain it.</p>
+        </div>
+        <div class="hero-glass">
+          <div class="glass-line"><svg class="ic"><use href="#i-siren"/></svg> EMERGENCY ACTIVE</div>
+          <strong>Your people are on their way</strong>
+          <p>Live location shared · alarm sounding · 3 contacts alerted</p>
+          <div class="map"><span class="pin"></span></div>
+        </div>
+        <div class="hero-index">SCROLL <span>↓</span></div>
+      </div>
+    </section>
+
+    <div class="ticker"><div class="ticker-track">
+      <span>Loudest alarm</span><svg class="ic sep"><use href="#i-bolt"/></svg><span>Live location</span><svg class="ic sep"><use href="#i-bolt"/></svg><span>Contacts you approve</span><svg class="ic sep"><use href="#i-bolt"/></svg><span>Hospital lookup</span><svg class="ic sep"><use href="#i-bolt"/></svg><span>Free on iPhone</span><svg class="ic sep"><use href="#i-bolt"/></svg><span>Loudest alarm</span><svg class="ic sep"><use href="#i-bolt"/></svg><span>Live location</span><svg class="ic sep"><use href="#i-bolt"/></svg><span>Contacts you approve</span><svg class="ic sep"><use href="#i-bolt"/></svg><span>Hospital lookup</span><svg class="ic sep"><use href="#i-bolt"/></svg><span>Free on iPhone</span><svg class="ic sep"><use href="#i-bolt"/></svg>
+    </div></div>
+
+    <!-- ABOUT -->
+    <section id="about" class="wrap section about">
+      <div class="head reveal">
+        <p class="eyebrow">01 / About Sentri</p>
+        <h2>Safety that <em>answers back.</em></h2>
+      </div>
+      <div class="about-grid">
+        <div class="about-copy reveal">
+          <p class="lead">Everybody has a moment they never planned for. The walk home that goes quiet. The ride that feels wrong. The sudden pain, the strange noise, the split second when you need someone to know exactly where you are. Sentri was built for that moment.</p>
+          <p>One trigger does what shaky hands can't: it screams your loudest alarm, opens your live-location map, and reaches only the emergency contacts you personally accepted. No strangers. No call centre. No fee for staying safe. It's a problem anyone, anywhere can face — now there's a button for it.</p>
+          <a class="text-link arrow" href="#how"><span>See how it works</span><i>↗</i></a>
+        </div>
+        <div class="about-photo reveal">
+          <img src="https://images.pexels.com/photos/3791664/pexels-photo-3791664.jpeg?cs=tinysrgb&w=1600" alt="Mother and daughter using a phone together in a park" />
+          <span class="photo-label">The people who wait up for you</span>
+        </div>
+      </div>
+      <div class="stats reveal">
+        <div><strong>01</strong><span>tap from panic to alarm, map and alerts</span></div>
+        <div><strong>100%</strong><span>of safety-critical features stay free</span></div>
+        <div><strong>Zero</strong><span>strangers alerted — contacts only you approve</span></div>
+      </div>
+    </section>
+
+    <!-- HOW SENTRI KEEPS YOU SAFE -->
+    <section id="safety" class="wrap section safety">
+      <div class="head reveal">
+        <p class="eyebrow">02 / How it keeps you safe</p>
+        <h2>Not a wish.<br /><em>A chain that works.</em></h2>
+        <p class="lead">Sentri doesn't hope someone notices. It removes the things that make emergencies dangerous: silence, confusion and the wrong people hearing about it.</p>
+      </div>
+      <div class="safety-grid">
+        <article class="safety-card reveal"><span class="n">01</span><h3>Only your people</h3><p>Alerts go to contacts you personally added — and who accepted you back. No strangers, no public broadcast, no monitoring centre.</p></article>
+        <article class="safety-card reveal"><span class="n">02</span><h3>It can't be silenced</h3><p>Emergency notifications bypass silent mode and play at maximum volume until someone responds. A quiet copy replaces the ring when the danger is over.</p></article>
+        <article class="safety-card reveal"><span class="n">03</span><h3>They see exactly where</h3><p>Your live location opens the moment you trigger. If your phone goes offline, the last known position stays visible and sharing resumes when you reconnect — until you stop it.</p></article>
+        <article class="safety-card reveal"><span class="n">04</span><h3>Help, not ads</h3><p>No data selling. No ad tracking. Push tokens are encrypted at rest, and every safety-critical tool stays free.</p></article>
+      </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section id="how" class="wrap section how">
+      <div class="head reveal">
+        <p class="eyebrow">03 / How it works</p>
+        <h2>Set up once.<br /><em>Protected everywhere.</em></h2>
+      </div>
+      <div class="cards-3">
+        <article class="card reveal"><div class="card-img"><img src="https://images.pexels.com/photos/26559074/pexels-photo-26559074.jpeg?cs=tinysrgb&w=1200" alt="Woman using a smartphone at night" /></div><div class="card-body"><span>01</span><h3>Install &amp; sign in</h3><p>Get the Android app or open the iPhone web app. Your phone number and one short code. That's the whole setup.</p></div></article>
+        <article class="card reveal"><div class="card-img"><img src="https://images.pexels.com/photos/7983198/pexels-photo-7983198.jpeg?cs=tinysrgb&w=1200" alt="Family taking a picture with a smartphone" /></div><div class="card-body"><span>02</span><h3>Choose your people</h3><p>Add the people you trust. They accept you. Alerts move only between people who agreed — never anyone else.</p></div></article>
+        <article class="card reveal"><div class="card-img"><img src="https://images.pexels.com/photos/11783260/pexels-photo-11783260.jpeg?cs=tinysrgb&w=1200" alt="Woman using her phone at a street crossing" /></div><div class="card-body"><span>03</span><h3>Trigger when it matters</h3><p>Late-night walk, uncomfortable ride, health scare. One tap. The siren, the map and the alerts go out together.</p></div></article>
+      </div>
+    </section>
+
+    <!-- GLOBAL REACH -->
+    <section class="wrap section global">
+      <div class="head reveal">
+        <p class="eyebrow">04 / Everywhere you are</p>
+        <h2>Speaks your language.<br /><em>Knows your country.</em></h2>
+        <p class="lead">The app ships in 19 complete languages and recognises 71 countries — so the alert, the instructions and the local emergency numbers arrive in words you actually understand. Safety doesn't stop at a border.</p>
+      </div>
+      <div class="global-stats reveal">
+        <div><strong class="count" data-to="19">19</strong><span>full language translations</span></div>
+        <div><strong class="count" data-to="71">71</strong><span>countries with local emergency numbers</span></div>
+      </div>
+      <div class="flag-marquee"><div class="flag-track" aria-label="71 countries supported by Sentri"></div></div>
+      <p class="flag-note reveal">Each country comes with its own police, fire and ambulance numbers — ready before you need them.</p>
+    </section>
+
+    <!-- FEATURES -->
+    <section id="features" class="section feature-band">
+      <div class="wrap feature-grid">
+        <div class="reveal">
+          <p class="eyebrow light">05 / What you get</p>
+          <h2>More than a<br /><em>panic button.</em></h2>
+          <p class="lead">A phone is already in your pocket. Sentri turns it into the thing you wish you had in an emergency: a siren that can't be ignored, a map that shows exactly where you are, and a direct line to your people.</p>
+          <div class="feature-list">
+            <div><span class="ico">◖</span><div><h3>Loudest alarm</h3><p>Full-screen, max-volume, until someone answers.</p></div></div>
+            <div><span class="ico">⌖</span><div><h3>Live location</h3><p>Your people see where you are now, not where you were.</p></div></div>
+            <div><span class="ico">✚</span><div><h3>Hospital lookup</h3><p>Nearest help, mid-emergency. Free, always.</p></div></div>
+          </div>
+        </div>
+        <div class="collage reveal">
+          <div class="collage-a"><img src="https://images.pexels.com/photos/14534011/pexels-photo-14534011.jpeg?cs=tinysrgb&w=1200" alt="Woman standing under a streetlight using her phone" /></div>
+          <div class="collage-b"><img src="https://images.pexels.com/photos/574071/pexels-photo-574071.jpeg?cs=tinysrgb&w=1200" alt="Person coding on a laptop" /></div>
+          <div class="collage-badge"><svg class="ic"><use href="#i-bolt"/></svg> One tap. Everyone alerted.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PRICING -->
+    <section id="pricing" class="wrap section pricing">
+      <div class="head center reveal">
+        <p class="eyebrow">06 / Pricing</p>
+        <h2>Safety is free.<br /><em>Convenience is premium.</em></h2>
+        <p class="lead">The tools that keep you safe stay free — always. Premium is the comfort layer for people who want more. No paywall on the important things.</p>
+      </div>
+      <div class="plans">
+        <article class="plan reveal"><p class="plan-label">Free</p><h3>₦0<span>/forever</span></h3><p class="plan-sub">For everyone who just needs to get home safe.</p><ul><li>Emergency alarms &amp; alerts</li><li>SOS to accepted contacts</li><li>Emergency live location</li><li>Nearest-hospital lookup</li><li>Lock-screen delivery</li></ul><a class="btn btn-dark" href="#download"><span>Get started</span><i>↗</i></a></article>
+        <article class="plan featured reveal"><p class="plan-label">Premium · most popular</p><h3>₦1,200<span>/month</span></h3><p class="plan-sub">Or $2.99 outside Nigeria. Cancel anytime.</p><ul><li>Everything in Free</li><li>Travel safety section</li><li>Gyms near me</li><li>Heart camera &amp; health suite</li><li>Exercise tracker &amp; awards</li><li>Water reminders</li><li>1-year live-share history</li><li>Unlimited contacts · custom alarms · watch</li></ul><a class="btn btn-mint" href="#download"><span>Go Premium</span><i>↗</i></a></article>
+        <article class="plan reveal"><p class="plan-label">Family</p><h3>₦20,000<span>/year</span></h3><p class="plan-sub">One household, five people, one payment.</p><ul><li>Premium for up to 5 members</li><li>1-year history for everyone</li><li>Two months cheaper than monthly</li></ul><a class="btn btn-dark" href="#download"><span>Get Family</span><i>↗</i></a></article>
+      </div>
+    </section>
+
+    <!-- DOWNLOAD -->
+    <section id="download" class="wrap section download">
+      <div class="dl android reveal">
+        <p class="eyebrow light">Android</p>
+        <h2>The full app.<br /><em>In your pocket.</em></h2>
+        <p>Every trigger, every lock, every safety tool is live in the Android app today. Download the signed build directly from our official release — no waiting, no middleman.</p>
+        <a class="btn btn-mint arrow" href="https://github.com/Victor1000000/Sentri-/releases/latest/download/sentri-latest.apk"><span>Download sentri-latest.apk</span><i>↓</i></a>
+        <small>Signed build · allow “unknown apps” when prompted</small>
+      </div>
+      <div class="dl light reveal">
+        <span class="free-tag">FREE FOR NOW</span>
+        <p class="eyebrow">iPhone</p>
+        <h2>iPhone today.<br /><em>Native apps soon.</em></h2>
+        <p>iOS 16.4+? Open the web app in Safari, add it to your home screen, allow emergency alerts once. Real lock-screen notifications — free for now. Native apps are coming soon to the Apple App Store and Google Play Store.</p>
+        <a class="btn btn-dark arrow" href="app.html"><span>Open iPhone alerts</span><i>↗</i></a>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section id="faq" class="wrap section faq">
+      <div class="head reveal"><p class="eyebrow">07 / FAQ</p><h2>The honest<br /><em>answers.</em></h2></div>
+      <div class="faq-list reveal">
+        <details open><summary>Who actually gets alerted?</summary><p>Only the contacts you personally accepted. Nobody else — not strangers, not a monitoring centre, not the internet. You choose the circle before you ever need it.</p></details>
+        <details><summary>Does it work if my phone is on silent?</summary><p>Yes. Sentri emergency alerts bypass silent mode and play at maximum volume. That is the whole point.</p></details>
+        <details><summary>Is Sentri only for Nigeria?</summary><p>No. The app recognises 71 countries with their local police, fire and ambulance numbers, and ships in 19 languages.Different people, different cities, same problem — same button.</p></details>
+        <details><summary>How do iPhone users get alerts without an app?</summary><p>By adding our web app to the home screen from Safari (iOS 16.4+). It delivers the same lock-screen emergency notifications — free for now. Native apps are coming soon to the Apple App Store and Google Play Store.</p></details>
+        <details><summary>What happens offline?</summary><p>The local siren works without a connection. If there's no data when you trigger, the alert is saved on the phone and sent automatically the moment you're back online. Delivery to another phone still needs a network — that's how all notifications work.</p></details>
+        <details><summary>Can I cancel Premium?</summary><p>Anytime, from inside the app. ₦1,200/month in Nigeria, $2.99/month internationally. No lock-in.</p></details>
+      </div>
+    </section>
+
+    <section class="support">
+      <div class="wrap support-inner reveal">
+        <div><p class="eyebrow light">Questions?</p><h2>Talk to a human,<br /><em>not a script.</em></h2></div>
+        <div><p>We answer every email. Support, feedback, refund requests, all of it.</p><a class="btn btn-mint arrow" href="mailto:therealsentri@gmail.com"><span>therealsentri@gmail.com</span><i>↗</i></a></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer-inner">
+      <a class="brand" href="index.html" aria-label="Sentri home">
+        <svg class="mark" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="20" fill="#0E08A3"/><g clip-path="url(#sentri-oval)" fill="#ffffff"><polygon points="0,0 100,0 100,17 0,23"/><polygon points="0,28 100,41 100,69 0,53"/><polygon points="0,100 0,87 100,74 100,100"/></g></svg>
+        <span>sentri</span>
+      </a>
+      <nav><a href="pricing.html">Pricing</a><a href="privacy.html">Privacy Policy</a><a href="terms.html">Terms</a><a href="app.html">iPhone alerts</a></nav>
+      <small>© 2026 Sentri · personal safety for everyone</small>
+    </div>
+  </footer>
+</body>
+</html>

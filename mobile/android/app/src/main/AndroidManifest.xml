@@ -1,0 +1,169 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Lets the drink-water reminder (and emergency alerts) keep working through the
+         battery savers phone makers run by default: the app asks the person to be
+         excused from them with a system dialog. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- The drink-water reminder fires through exact alarms when the system allows them,
+         so a schedule survives doze and battery saving. Dropped schedules are re-armed
+         inside the app on every open (see scheduleWaterReminder). -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- v42: on Android 14+ SCHEDULE_EXACT_ALARM is denied by default for newly installed
+         apps, and the inexact fallback can be pushed around by doze. USE_EXACT_ALARM is
+         granted automatically and honestly fits: the whole app is an alarm-keeper
+         (emergency gestures, water reminders). -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <!-- v42: Add contact can open the phone's own saved contacts list, so a number
+         does not have to be typed by hand. Shown to the person as an explicit
+         permission, asked in the add-contact sheet, never used in the background. -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <!-- Health Connect: the accurate heart-rate source on the phone. Read-only, one data type. -->
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
+    <!-- The hardware step counter used by the exercise section (walk/run steps). -->
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <!-- The app's own pulse reading: fingertip over the rear lens, torch on. Optional hardware. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
+
+    <application
+        android:name="${applicationName}"
+        android:label="Sentri"
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:networkSecurityConfig="@xml/network_security_config">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true">
+            <meta-data
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Health Connect: Android requires an app declaring the activity-alias for its
+             permission screen, with the honest reason why the app wants heart-rate data. -->
+        <activity-alias
+            android:name="ViewPermissionUsageActivity"
+            android:exported="true"
+            android:targetActivity=".MainActivity"
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+                <category android:name="android.intent.category.HEALTH_CONNECT" />
+            </intent-filter>
+            <meta-data
+                android:name="android.content.PERMISSION_REASON"
+                android:resource="@string/health_permission_reason" />
+        </activity-alias>
+
+        <!-- Always-on listener: shake, screen-toggle gesture, floating button. -->
+        <service
+            android:name=".ProtectionService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Listens for the user's emergency gestures (shake, button presses) so a safety alert can be started from a locked phone." />
+        </service>
+
+        <!-- Volume-button gesture. Reads key presses only, never screen content. -->
+        <service
+            android:name=".VolumeComboAccessibilityService"
+            android:exported="true"
+            android:label="Sentri volume shortcut"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+
+        <service
+            android:name=".SentriTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_stat_sentri"
+            android:label="@string/tile_label"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- v43: the drink-water reminder as a native self-perpetuating alarm: each
+             firing shows the notification and re-arms the NEXT one itself, so battery
+             managers that prune a pre-laid chain of scheduled notifications cannot
+             silence the pace after the first reminder. WaterBootReceiver re-seeds the
+             chain after a reboot or an app update. -->
+        <receiver
+            android:name=".WaterReminderReceiver"
+            android:exported="false" />
+        <!-- v46: the standing 15-minute alarm that keeps the emergency trigger listeners
+             alive when the app has not been opened for days (see AlertKeepalive). -->
+        <receiver
+            android:name=".AlertKeepalive"
+            android:exported="false" />
+        <receiver
+            android:name=".WaterBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+    </application>
+
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT" />
+            <data android:mimeType="text/plain" />
+        </intent>
+        <!-- Health Connect: checks whether it is on the phone and lets it show our reasons. -->
+        <package android:name="com.google.android.apps.healthdata" />
+        <intent>
+            <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+        </intent>
+    </queries>
+</manifest>

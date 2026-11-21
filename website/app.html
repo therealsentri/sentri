@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Sentri — iPhone emergency alerts</title>
+  <meta name="description" content="Add this site to your home screen and allow emergency alerts once. Sentri alerts will ring your lock screen. Free on iOS 16.4+." />
+  <meta name="theme-color" content="#F4F3F9" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0E0F12" media="(prefers-color-scheme: dark)" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Sentri" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" />
+  <link rel="stylesheet" href="style.css?v=11" />
+</head>
+<body>
+  <main id="app">
+    <!-- 1: landing -->
+    <section class="card" id="screen-intro">
+      <a class="back" href="index.html">← Back to site</a>
+      <div class="logo-head">
+        <svg class="logo-tile" viewBox="0 0 100 100" aria-hidden="true">
+          <clipPath id="oval"><ellipse cx="50" cy="50" rx="50" ry="50" /></clipPath>
+          <g clip-path="url(#oval)" fill="#ffffff">
+            <polygon points="0,0 100,0 100,17 0,23" />
+            <polygon points="0,28 100,41 100,69 0,53" />
+            <polygon points="0,100 0,87 100,74 100,100" />
+          </g>
+        </svg>
+        <span class="wordmark">Sentri</span>
+      </div>
+      <span class="free-tag">FREE FOR NOW</span>
+      <h1 class="headline">Emergency alerts,<br />even with no app.</h1>
+      <p class="lede">Add this site to your home screen and allow emergency alerts once. If someone you accepted as a contact is in danger, your phone rings - straight to the lock screen. On iPhone (iOS 16.4+) these are real notifications, free, with nothing to renew.</p>
+      <ul class="points">
+        <li>Sign in with your phone number.</li>
+        <li>Tap <strong>Allow emergency alerts</strong> once.</li>
+        <li>Alerts ring even when the site is closed - the quiet one stops them the moment someone responds.</li>
+      </ul>
+      <button class="action" id="btn-start">Get alerts</button>
+    </section>
+
+    <!-- 2: sign in -->
+    <section class="card hidden" id="screen-signin">
+      <h2 class="title">Sign in</h2>
+      <p class="lede">Your phone number. This is how your contacts find you on Sentri.</p>
+      <form id="form-phone">
+        <label class="field-label" for="phone">Phone number</label>
+        <input class="field" id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+234 800 000 0000" required />
+        <button class="action" id="btn-otp" type="submit">Send sign-in code</button>
+      </form>
+      <form id="form-code" class="hidden">
+        <label class="field-label" for="code">Code</label>
+        <input class="field" id="code" name="code" inputmode="numeric" maxlength="6" placeholder="6-digit code" autocomplete="one-time-code" required />
+        <button class="action" id="btn-verify" type="submit">Sign in</button>
+      </form>
+      <p class="note hidden" id="telegram-note">
+        Codes arrive in the <a id="telegram-link" href="#" target="_blank" rel="noopener">Sentri Telegram bot</a>. Open it, press <strong>Start</strong>, then come back and enter your phone number.
+      </p>
+      <p class="err hidden" id="signin-err"></p>
+    </section>
+
+    <!-- 3: alerts -->
+    <section class="card hidden" id="screen-alerts">
+      <h2 class="title">Emergency alerts</h2>
+      <p class="lede" id="alerts-state">One tap, then your phone is protected.</p>
+      <button class="action" id="btn-allow">Allow emergency alerts</button>
+      <p class="note hidden" id="add-to-hs">
+        <strong>On iPhone:</strong> use Safari's Share button, choose <strong>Add to Home Screen</strong>, open Sentri from the new icon, and tap the button there. Apple only sends these alerts to installed sites.
+      </p>
+      <p class="err hidden" id="alerts-err"></p>
+      <ul class="points small">
+        <li>You only ever receive alerts for emergencies of people you accepted as a contact in the app.</li>
+        <li>Alerts are receive-only here for now: raising an emergency lives in the app, where the locks, triggers and cameras are.</li>
+      </ul>
+    </section>
+
+    <footer>
+      <svg class="logo-mini" viewBox="0 0 100 100" aria-hidden="true"><g fill="#ffffff"><polygon points="0,0 100,0 100,17 0,23" /><polygon points="0,28 100,41 100,69 0,53" /><polygon points="0,100 0,87 100,74 100,100" /></g></svg>
+      <a id="signout" class="link" href="#">Sign out</a>
+    </footer>
+  </main>
+  <script src="app.js" type="module"></script>
+</body>
+</html>

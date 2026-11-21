@@ -1,0 +1,39 @@
+name: Build Sentri iOS (simulator proof)
+
+# Proves the iPhone build compiles on every push to main, or by hand:
+# Actions > Build Sentri iOS (simulator proof) > Run workflow.
+# A SIMULATOR build needs no Apple signing, so this runs without any Apple
+# Developer account. Distribution (TestFlight / App Store) is a separate step
+# that needs the account - this workflow only proves the code builds.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Generate iOS scaffolding, keep our own sources
+        run: |
+          cp -R ios/Runner /tmp/our_runner
+          flutter create . --org ng.sentri --project-name sentri --platforms=ios
+          cp -R /tmp/our_runner/. ios/Runner/
+          rm -f test/widget_test.dart
+
+      - name: Run mobile tests
+        run: flutter test
+
+      - name: Build iOS for the simulator (no signing needed)
+        run: flutter build ios --simulator --no-codesign --dart-define=API_BASE_URL=${{ secrets.API_BASE_URL || 'https://api.example.invalid' }}
