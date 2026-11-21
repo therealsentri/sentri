@@ -1,0 +1,173 @@
+/* Sentri's web look, mirrored from the app's own theme (theme.dart, brand.dart).
+ * Same wash, same panels, same pills, same Poppins - so the site reads as the
+ * app in a browser. Light is the default exactly as in the app, with the dark
+ * tokens riding prefers-color-scheme.
+ */
+
+:root {
+  /* SentriColors (dark apps) + light surface */
+  --surface: #f4f3f9;
+  --card: #ffffff;
+  --ink: #17181c;
+  --muted: rgba(23, 24, 28, 0.55);
+  --outline: rgba(23, 24, 28, 0.12);
+  --action: #17181c; /* the near-black "ink" pill of the day theme */
+  --on-action: #ffffff;
+  --alarm: #c8201a;
+  --safe: #1f7a4d;
+  --indigo: #0e08a3;
+  --indigo-hi: #6a5ff0;
+  --mint: #17b86a;
+  --amber: #e5a33c;
+  --wash-a: 0.10;
+  --wash-b: 0.10;
+  --wash-c: 0.07;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #0e0f12;
+    --card: #17181d;
+    --ink: #f2f2f4;
+    --muted: rgba(242, 242, 244, 0.55);
+    --outline: rgba(242, 242, 244, 0.10);
+    --action: #c6f16e; /* the lime energy pill of the night theme */
+    --on-action: rgba(0, 0, 0, 0.85);
+    --alarm: #e0443d;
+    --safe: #4cc388;
+    --wash-a: 0.11;
+    --wash-b: 0.11;
+    --wash-c: 0.07;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: Poppins, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The app's WashPainter: warm indigo pool top-right, mint bottom-left, a
+ * whisper of amber between - over the calm surface (10-11% alpha, exact). */
+body {
+  min-height: 100vh;
+  color: var(--ink);
+  background-color: var(--surface);
+  background-image:
+    radial-gradient(circle 60vw at calc(100% - 8px) -10vw, rgba(106, 95, 240, var(--wash-a)), transparent 70%),
+    radial-gradient(circle 64vw at -12vw calc(100% + 10px), rgba(23, 184, 106, var(--wash-b)), transparent 70%),
+    radial-gradient(circle 38vw at 85% 92%, rgba(229, 163, 60, var(--wash-c)), transparent 70%);
+  background-attachment: fixed;
+}
+
+#app {
+  max-width: 27rem;
+  margin: 0 auto;
+  padding: calc(1.5rem + env(safe-area-inset-top)) 1.25rem calc(1.5rem + env(safe-area-inset-bottom));
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* The app's card: radius 24, near-flat shadow, quiet outline. */
+.card {
+  background: var(--card);
+  border: 1px solid var(--outline);
+  border-radius: 24px;
+  padding: 1.75rem 1.4rem;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+  margin-top: 0.75rem;
+}
+
+/* Logo tile + wordmark, straight from brand.dart (indigo tile, mint mark). */
+.logo-head { display: flex; flex-direction: column; gap: 0.7rem; margin-bottom: 1.1rem; }
+.logo-tile {
+  width: 58px;
+  height: 58px;
+  border-radius: 17px;
+  background: var(--indigo);
+  padding: 10px;
+  box-shadow: 0 5px 14px rgba(14, 8, 163, 0.28);
+}
+.wordmark {
+  font-size: 27px;
+  font-weight: 500;
+  letter-spacing: -0.95px;
+  color: var(--indigo);
+  line-height: 1;
+}
+.logo-mini { width: 22px; height: 22px; vertical-align: -5px; margin-right: 6px; }
+@media (prefers-color-scheme: dark) { .logo-mini { fill-opacity: 0.9; } .wordmark { color: #aaa6f8; } }
+
+/* Type scale mirrors the theme's textTheme. */
+.headline {
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: -1px;
+  line-height: 1.1;
+  margin: 0 0 0.6rem;
+}
+.title {
+  font-size: 25px;
+  font-weight: 600;
+  letter-spacing: -0.6px;
+  line-height: 1.15;
+  margin: 0 0 0.5rem;
+}
+.lede { color: var(--ink); font-size: 15px; line-height: 1.42; margin: 0 0 1rem; }
+.points { margin: 0 0 1.4rem; padding-left: 1.2rem; font-size: 14px; line-height: 1.5; color: var(--ink); }
+.points.small { font-size: 12.5px; color: var(--muted); margin: 0.9rem 0 0; line-height: 1.45; }
+.points li { margin-bottom: 0.35rem; }
+.points strong { font-weight: 600; }
+
+/* FilledButton theme: height 52, radius 30, 15px w700, ink/lime pill. */
+.free-tag { display: inline-block; background: #13FF47; color: #0E08A3; font-weight: 700; font-size: .7rem; letter-spacing: .12em; padding: .3rem .7rem; border-radius: 8px; margin-bottom: .8rem; }
+.action {
+  width: 100%;
+  min-height: 52px;
+  border: 0;
+  border-radius: 30px;
+  padding: 0.6rem 1.2rem;
+  font: 700 15px/1.3 Poppins, -apple-system, sans-serif;
+  background: var(--action);
+  color: var(--on-action);
+  cursor: pointer;
+  transition: transform 0.08s ease, opacity 0.15s ease;
+}
+.action:active { transform: scale(0.99); }
+.action[disabled] { opacity: 0.6; cursor: default; }
+
+/* InputDecoration theme: filled pill field with an outline. */
+.field-label { display: block; font-size: 14px; color: var(--ink); margin: 0.2rem 0 0.45rem 6px; }
+.field {
+  width: 100%;
+  min-height: 52px;
+  border: 1px solid var(--outline);
+  border-radius: 30px;
+  background: var(--card);
+  color: var(--ink);
+  font: 500 16px/1.3 Poppins, -apple-system, sans-serif;
+  padding: 0 1.2rem;
+  margin: 0 0 1rem;
+  outline: none;
+}
+.field:focus { border-color: var(--indigo-hi); }
+
+.note { font-size: 12.5px; line-height: 1.5; color: var(--muted); margin: 0.9rem 0 0; }
+.note a { color: var(--indigo); font-weight: 600; }
+.err { color: var(--alarm); font-size: 12.5px; margin: 0.75rem 0 0; }
+
+.hidden { display: none !important; }
+
+footer {
+  margin-top: auto;
+  padding-top: 1.5rem;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+.link { color: var(--muted); }
