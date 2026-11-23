@@ -183,7 +183,10 @@ export class SosEngine {
     const ev = await store.getEvent(id);
     if (!ev || (ev.state !== 'active' && ev.state !== 'countdown')) return;
 
-    if (ev.repeatCount >= cfg.maxRepeats) {
+    // v52: emergency notifications never time out. A cap only applies when an
+    // operator explicitly sets MAX_REPEATS > 0; the default (0) means the loop
+    // reschedules forever until a contact answers or the sender cancels.
+    if (cfg.maxRepeats > 0 && ev.repeatCount >= cfg.maxRepeats) {
       await store.transition(id, ['active'], { state: 'expired', endedAt: clock() });
       await this.record('system', 'sos.expired', id);
       return;
