@@ -80,13 +80,24 @@ describe('repeat / acknowledge loop', () => {
     expect(await h.engine.acknowledge(token)).toBe('invalid');
   });
 
-  it('expires after the repeat cap instead of running (and costing money) forever', async () => {
+  it('expires only when an operator sets a repeat cap', async () => {
     const h = await harness({ maxRepeats: 3 });
     const { sosId } = await h.engine.start('u1', 'shake', GEO);
     await h.sched.advance(5000 + 25000 * 4);
     expect((await h.store.getEvent(sosId))!.state).toBe('expired');
     expect(h.sched.pending()).toEqual([]);
     expect(h.notifier.messages).toHaveLength(9); // 3 rounds x 3 contacts
+  });
+
+  it('with the default unlimited mode, an unanswered alert rings past 12 hours', async () => {
+    const h = await harness({ maxRepeats: 0 });
+    const { sosId } = await h.engine.start('u1', 'shake', GEO);
+    await h.sched.advance(13 * 60 * 60_000); // 13 hours, no answer
+    const ev = (await h.store.getEvent(sosId))!;
+    expect(ev.state).toBe('active');
+    expect(ev.repeatCount).toBeGreaterThan(1000);
+    expect(h.notifier.messages.length).toBeGreaterThan(3000);
+    expect(h.sched.pending()).not.toEqual([]);
   });
 
   it('one failing contact does not stop the others', async () => {
