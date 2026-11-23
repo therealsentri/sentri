@@ -345,7 +345,11 @@ retention?.start();
 // generous grace for slow boots and queue hiccups). Cancelled/acknowledged alerts are untouched.
 if (pool) {
   const db = pool;
-  const maxLiveMs = Math.max(env.MAX_REPEATS * env.REPEAT_INTERVAL_MS, env.CANCEL_WINDOW_MS) + 10 * 60_000;
+  // Unlimited mode uses the push store-and-forward window (7 days): a live alert
+  // is never declared stale while a notification could still be delivered.
+  const maxLiveMs = env.MAX_REPEATS > 0
+    ? Math.max(env.MAX_REPEATS * env.REPEAT_INTERVAL_MS, env.CANCEL_WINDOW_MS) + 10 * 60_000
+    : 7 * 24 * 60 * 60_000;
   const expireStale = async () => {
     const cut = clock() - maxLiveMs;
     const r = await db.query(
