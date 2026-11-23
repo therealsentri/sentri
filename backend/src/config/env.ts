@@ -42,7 +42,7 @@ export const EnvSchema = z
 
     CANCEL_WINDOW_MS: z.coerce.number().int().min(0).default(5000),
     REPEAT_INTERVAL_MS: z.coerce.number().int().min(1000).default(25000),
-    MAX_REPEATS: z.coerce.number().int().min(1).default(240),
+    MAX_REPEATS: z.coerce.number().int().min(0).default(0), // 0 = unlimited: an emergency rings until answered
     OFFLINE_AFTER_MS: z.coerce.number().int().min(10000).default(90000),
     PIN_MAX_ATTEMPTS: z.coerce.number().int().min(3).default(5),
     PIN_LOCKOUT_MS: z.coerce.number().int().min(1000).default(300000),
