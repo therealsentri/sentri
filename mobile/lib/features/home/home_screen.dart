@@ -13,6 +13,7 @@ import '../../core/settings.dart';
 import '../../core/net/api.dart';
 import '../contacts/contacts_screen.dart';
 import '../devices/watch_screen.dart';
+import '../support/support_screen.dart';
 import '../billing/upgrade_screen.dart';
 import '../health/exercise_controller.dart';
 import '../inbox/inbox_controller.dart';
@@ -741,6 +742,16 @@ class _ShortcutsPage extends StatelessWidget {
                       subtitle: Text(t('watch.card_sub'), style: TextStyle(fontSize: 12, height: 1.3, color: cs.onSurface.withValues(alpha: 0.55))),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => WatchScreen(i18n: w.i18n))),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Card(
+                    child: ListTile(
+                      leading: Icon(Icons.my_location, color: cs.primary),
+                      title: const Text('Find my phone & feedback'),
+                      subtitle: const Text('Locate a lost phone, or tell us what to improve.'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => SupportScreen(location: w.location))),
                     ),
                   ),
                   const SizedBox(height: 16),
