@@ -1,7 +1,7 @@
 import { createHmac } from 'node:crypto';
 import Fastify from 'fastify';
 import { describe, expect, it } from 'vitest';
-import { MemoryBillingStore, PAYSTACK_PLANS, registerBillingRoutes } from '../src/modules/billing/billing.js';
+import { isPremium, MemoryBillingStore, PAYSTACK_PLANS, registerBillingRoutes } from '../src/modules/billing/billing.js';
 
 function rig() {
   const app = Fastify();
@@ -21,6 +21,14 @@ const webhook = (body: unknown, secret: string) => ({
 });
 
 describe('billing routes', () => {
+  it('a paid plan stays premium; trial expires after 14 days', async () => {
+    const future = new Date(Date.now() + 86_400_000).toISOString();
+    const past = new Date(Date.now() - 86_400_000).toISOString();
+    expect(isPremium({ plan: 'monthly', expiresAt: future, trialEndsAt: past })).toBe(true);
+    expect(isPremium({ plan: 'free', expiresAt: null, trialEndsAt: future })).toBe(true);
+    expect(isPremium({ plan: 'free', expiresAt: null, trialEndsAt: past })).toBe(false);
+  });
+
   it('publishes both rails and keeps status private', async () => {
     const { app } = rig();
     const plans = await app.inject({ method: 'GET', url: '/v1/billing/plans' });
@@ -30,7 +38,10 @@ describe('billing routes', () => {
     const anon = await app.inject({ method: 'GET', url: '/v1/billing/status' });
     expect(anon.statusCode).toBe(401);
     const mine = await app.inject({ method: 'GET', url: '/v1/billing/status', headers: { 'x-dev-user': 'u1' } });
-    expect(mine.json()).toEqual({ plan: 'free', expiresAt: null });
+    const mine = await app.inject({ method: 'GET', url: '/v1/billing/status', headers: { 'x-dev-user': 'u1' } });
+    expect(mine.json().plan).toBe('free');
+    expect(mine.json().premium).toBe(true); // 14-day trial is running
+    expect(mine.json().trialEndsAt).toBeTruthy();
   });
 
   it('rejects a forged Paystack webhook', async () => {
