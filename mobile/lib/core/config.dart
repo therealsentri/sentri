@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 ///
 /// 10.0.2.2 is the host machine as seen from the Android emulator.
 class AppConfig {
-  static const apiBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://10.0.2.2:8080');
+  static const apiBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'https://sentri-api.onrender.com');
   /// The server address to use. A release build refuses anything that is not HTTPS, so a mistake in the build
   /// settings can never send phone numbers or locations over an open connection.
   static String get safeApiBaseUrl {
