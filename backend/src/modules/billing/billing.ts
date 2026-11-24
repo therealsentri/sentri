@@ -2,9 +2,24 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { Pool } from 'pg';
 
-export interface BillingStatus { plan: string; expiresAt: string | null }
+export interface BillingStatus {
+  plan: string;
+  expiresAt: string | null;
+  /** v53: true while the 14-day trial is running or a paid plan is active. */
+  premium: boolean;
+  trialEndsAt: string | null;
+}
+
+/** 14 days from the first authenticated check — no client input involved. */
+export const TRIAL_DAYS = 14;
+const PAID = new Set(['monthly', 'yearly', 'family']);
+export function isPremium(s: Pick<BillingStatus, 'plan' | 'expiresAt' | 'trialEndsAt'>, now = Date.now()): boolean {
+  if (PAID.has(s.plan) && (!s.expiresAt || new Date(s.expiresAt).getTime() > now)) return true;
+  return !!s.trialEndsAt && new Date(s.trialEndsAt).getTime() > now;
+}
 
 export interface BillingStore {
+  /** Returns the stored record; starts the trial on first call if needed. */
   status(uid: string): Promise<BillingStatus>;
   /** Returns false when the reference was already used (idempotent webhook). */
   activate(uid: string, plan: string, days: number, reference: string, amount: number, currency: string): Promise<boolean>;
@@ -13,9 +28,16 @@ export interface BillingStore {
 export class PgBillingStore implements BillingStore {
   constructor(private readonly pool: Pool) {}
   async status(uid: string): Promise<BillingStatus> {
-    const r = await this.pool.query('SELECT plan, plan_expires_at AS "expiresAt" FROM users WHERE id=$1', [uid]);
-    const row = r.rows[0] as { plan?: string; expiresAt?: Date | string | null } | undefined;
-    return { plan: row?.plan ?? 'free', expiresAt: row?.expiresAt ? String(row.expiresAt) : null };
+    const r = await this.pool.query('SELECT plan, plan_expires_at AS "expiresAt", trial_started_at AS "trialStartedAt" FROM users WHERE id=$1', [uid]);
+    const row = r.rows[0] as { plan?: string; expiresAt?: Date | string | null; trialStartedAt?: Date | string | null } | undefined;
+    let started = row?.trialStartedAt ? new Date(row.trialStartedAt) : null;
+    if (!started || Number.isNaN(started.getTime())) {
+      await this.pool.query('UPDATE users SET trial_started_at=now() WHERE id=$1 AND trial_started_at IS NULL', [uid]);
+      started = new Date();
+    }
+    const trialEndsAt = new Date(started.getTime() + TRIAL_DAYS * 86_400_000).toISOString();
+    const s = { plan: row?.plan ?? 'free', expiresAt: row?.expiresAt ? String(row.expiresAt) : null, trialEndsAt };
+    return { ...s, premium: isPremium(s) };
   }
   async activate(uid: string, plan: string, days: number, reference: string, amount: number, currency: string): Promise<boolean> {
     const client = await this.pool.connect();
@@ -38,12 +60,19 @@ export class PgBillingStore implements BillingStore {
 
 export class MemoryBillingStore implements BillingStore {
   private readonly plans = new Map<string, BillingStatus>();
+  private readonly trials = new Map<string, string>();
   private readonly seen = new Set<string>();
-  async status(uid: string): Promise<BillingStatus> { return this.plans.get(uid) ?? { plan: 'free', expiresAt: null }; }
+  async status(uid: string): Promise<BillingStatus> {
+    const saved = this.plans.get(uid);
+    if (!this.trials.has(uid)) this.trials.set(uid, new Date().toISOString());
+    const trialEndsAt = new Date(new Date(this.trials.get(uid)!).getTime() + TRIAL_DAYS * 86_400_000).toISOString();
+    const s = { plan: saved?.plan ?? 'free', expiresAt: saved?.expiresAt ?? null, trialEndsAt };
+    return { ...s, premium: isPremium(s) };
+  }
   async activate(uid: string, plan: string, days: number, reference: string, amount: number, currency: string): Promise<boolean> {
     if (this.seen.has(reference)) return false;
     this.seen.add(reference);
-    this.plans.set(uid, { plan, expiresAt: new Date(Date.now() + days * 86_400_000).toISOString() });
+    this.plans.set(uid, { plan, expiresAt: new Date(Date.now() + days * 86_400_000).toISOString(), premium: true, trialEndsAt: this.plans.get(uid)?.trialEndsAt ?? null });
     return true;
   }
 }
