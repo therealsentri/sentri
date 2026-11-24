@@ -210,6 +210,16 @@ p { color: var(--muted); }
 .tiny { font-size: .7rem; color: #6A6B74; }
 @media (max-width: 560px) { .legal-art img { height: 200px; } }
 
+/* FULL FEATURE GRID */
+.feature-list-full { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.feature-list-full article { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 1.2rem; }
+.feature-list-full article > span { font-size: .6rem; letter-spacing: .12em; color: var(--mint); }
+.feature-list-full article:nth-child(n+10) > span { color: #ffb86b; }
+.feature-list-full h3 { font-weight: 400; font-size: 1rem; margin: .5rem 0 .35rem; }
+.feature-list-full p { font-size: .8rem; }
+@media (max-width: 1000px) { .feature-list-full { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px) { .feature-list-full { grid-template-columns: 1fr; } }
+
 /* HOW IT KEEPS YOU SAFE */
 .safety-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
 .safety-card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 1.6rem; }
