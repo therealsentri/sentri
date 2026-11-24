@@ -1,4 +1,4 @@
-import '../core/net/api.dart';
+import '../../core/net/api.dart';
 
 /// v53: entitlement mirror only. The server is the source of truth; this just
 /// decides which screen to open. It is refreshed on startup and whenever the
