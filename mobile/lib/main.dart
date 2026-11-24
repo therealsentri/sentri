@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'app.dart';
 import 'core/poppins.dart';
+import 'features/billing/premium_state.dart';
 import 'services.dart';
 
 Future<void> main() async {
@@ -15,5 +16,7 @@ Future<void> main() async {
   // base64 faces loaded into the engine before the first frame, so nothing is fetched.
   await BrandPoppins.ensure();
   final services = await AppServices.create();
+  PremiumState.bind(services.api);
+  await PremiumState.refresh();
   runApp(SentriApp(services: services));
 }
