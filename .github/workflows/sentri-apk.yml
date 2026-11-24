@@ -68,7 +68,7 @@ jobs:
       - name: Build the APK (release, then debug as fallback)
         run: |
           set +e
-          DEFINE="--dart-define=API_BASE_URL=${{ secrets.API_BASE_URL || 'https://api.example.invalid' }}"
+          DEFINE="--dart-define=API_BASE_URL=https://sentri-api.onrender.com"
           flutter build apk --release --obfuscate --split-debug-info=build/symbols $DEFINE 2>&1 | tee "$GITHUB_WORKSPACE/build.log"
           if [ "${PIPESTATUS[0]}" -ne 0 ]; then
             echo "::warning::Release build failed, trying a debug build instead"
