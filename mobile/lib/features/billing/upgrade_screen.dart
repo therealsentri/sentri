@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/net/api.dart';
 import '../../core/widgets/brand.dart';
+import 'premium_state.dart';
 
 /// v51: the only place in the app where a purchase starts. The decision about
 /// what is unlocked lives on the server (users.plan), never here.
@@ -24,6 +25,7 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
   @override
   void initState() {
     super.initState();
+    PremiumState.refresh();
     widget.api.billingStatus().then((s) {
       if (mounted) setState(() => _current = s['plan'] as String? ?? 'free');
     }).catchError((_) {});
