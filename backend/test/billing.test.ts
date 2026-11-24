@@ -37,7 +37,7 @@ describe('billing routes', () => {
     expect(plans.json().international[0].currency).toBe('USD');
     const anon = await app.inject({ method: 'GET', url: '/v1/billing/status' });
     expect(anon.statusCode).toBe(401);
-    const mine = await app.inject({ method: 'GET', url: '/v1/billing/status', headers: { 'x-dev-user': 'u1' } });
+
     const mine = await app.inject({ method: 'GET', url: '/v1/billing/status', headers: { 'x-dev-user': 'u1' } });
     expect(mine.json().plan).toBe('free');
     expect(mine.json().premium).toBe(true); // 14-day trial is running
