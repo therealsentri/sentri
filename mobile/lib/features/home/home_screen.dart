@@ -14,6 +14,7 @@ import '../../core/net/api.dart';
 import '../contacts/contacts_screen.dart';
 import '../devices/watch_screen.dart';
 import '../support/support_screen.dart';
+import '../billing/premium_state.dart';
 import '../billing/upgrade_screen.dart';
 import '../health/exercise_controller.dart';
 import '../inbox/inbox_controller.dart';
@@ -39,6 +40,17 @@ import '../sos/sos_controller.dart';
 /// person holds the SOS — or the alert is live — the whole screen leans toward
 /// alarm red and the face smirks, not frowns. The face blinks every two seconds
 /// so it feels alive; the shared painter lives in flat.dart.
+/// Premium sections are open during the 14-day trial; afterwards the upgrade screen replaces them.
+Future<void> _openPremiumScreen(BuildContext context, SentriApi api, Widget Function() build) async {
+  await PremiumState.refresh();
+  if (!context.mounted) return;
+  if (PremiumState.premium) {
+    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => build()));
+  } else {
+    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => UpgradeScreen(api: api)));
+  }
+}
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required this.sos, required this.settings, required this.i18n, required this.bridge, required this.api, required this.inbox, required this.share, required this.checkin, required this.police, required this.people, required this.profile, required this.exercise, required this.location});
   final SentriApi api;
@@ -294,7 +306,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           label: t('share.title'),
                           icon: Icons.share_location_rounded,
                           live: widget.share.active != null,
-                          onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => ShareScreen(share: widget.share, api: widget.api, i18n: widget.i18n, people: widget.people, settings: widget.settings))),
+                          onTap: () => _openPremiumScreen(context, widget.api, () => ShareScreen(share: widget.share, api: widget.api, i18n: widget.i18n, people: widget.people, settings: widget.settings)),
                         ),
                       ),
                       Expanded(
@@ -315,7 +327,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         child: _CircleTile(
                           label: t('travel.title'),
                           icon: Icons.flight_takeoff_rounded,
-                          onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => TravelScreen(location: widget.location, i18n: widget.i18n))),
+                          onTap: () => _openPremiumScreen(context, widget.api, () => TravelScreen(location: widget.location, i18n: widget.i18n)),
                         ),
                       ),
                     ]),
@@ -725,8 +737,10 @@ class _ShortcutsPage extends StatelessWidget {
                   Card(
                     child: ListTile(
                       leading: Icon(Icons.workspace_premium_outlined, color: cs.primary),
-                      title: const Text('Sentri Premium'),
-                      subtitle: const Text('Travel safety, health suite, history and more. Safety stays free.'),
+                      title: Text('Sentri Premium · ${PremiumState.label}'),
+                      subtitle: Text(PremiumState.premium && PremiumState.plan == 'free'
+                          ? 'Full access during your 14-day trial.'
+                          : 'Travel, health suite, history and more.'),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => UpgradeScreen(api: w.api))),
                     ),
@@ -741,7 +755,7 @@ class _ShortcutsPage extends StatelessWidget {
                       title: Text(t('watch.card')),
                       subtitle: Text(t('watch.card_sub'), style: TextStyle(fontSize: 12, height: 1.3, color: cs.onSurface.withValues(alpha: 0.55))),
                       trailing: const Icon(Icons.chevron_right),
-                      onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => WatchScreen(i18n: w.i18n))),
+                      onTap: () => _openPremiumScreen(context, w.api, () => WatchScreen(i18n: w.i18n)),
                     ),
                   ),
                   const SizedBox(height: 16),
