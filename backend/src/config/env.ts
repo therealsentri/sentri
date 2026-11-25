@@ -97,7 +97,8 @@ export const EnvSchema = z
   })
   .superRefine((v, ctx) => {
     if (v.STORE === 'postgres') {
-      for (const k of ['DATABASE_URL', 'REDIS_URL', 'JWT_SECRET', 'DATA_KEY', 'PHONE_HMAC_KEY'] as const) {
+      // REDIS_URL is optional: without it the in-process TimerScheduler runs jobs.
+      for (const k of ['DATABASE_URL', 'JWT_SECRET', 'DATA_KEY', 'PHONE_HMAC_KEY'] as const) {
         if (!v[k]) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [k], message: `${k} is required when STORE=postgres` });
       }
     }
