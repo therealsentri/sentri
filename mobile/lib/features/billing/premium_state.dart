@@ -4,6 +4,9 @@ import '../../core/net/api.dart';
 /// decides which screen to open. It is refreshed on startup and whenever the
 /// shortcuts page is opened (including returning from a payment browser).
 class PremiumState {
+  /// Vic's own build is compiled with -D SENTRI_FREE_BUILD=true: every feature
+  /// is open and the payment screen is never a gate for him.
+  static const bool freeBuild = bool.fromEnvironment('SENTRI_FREE_BUILD', defaultValue: false);
   static SentriApi? _api;
   static bool premium = false;
   static String plan = 'free';
@@ -12,6 +15,7 @@ class PremiumState {
   static void bind(SentriApi api) => _api = api;
 
   static Future<void> refresh() async {
+    if (freeBuild) { premium = true; return; }
     final api = _api;
     if (api == null) return;
     try {
