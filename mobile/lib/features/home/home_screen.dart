@@ -42,6 +42,10 @@ import '../sos/sos_controller.dart';
 /// so it feels alive; the shared painter lives in flat.dart.
 /// Premium sections are open during the 14-day trial; afterwards the upgrade screen replaces them.
 Future<void> _openPremiumScreen(BuildContext context, SentriApi api, Widget Function() build) async {
+  if (PremiumState.freeBuild) {
+    if (context.mounted) await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => build()));
+    return;
+  }
   await PremiumState.refresh();
   if (!context.mounted) return;
   if (PremiumState.premium) {
@@ -765,7 +769,7 @@ class _ShortcutsPage extends StatelessWidget {
                       title: const Text('Find my phone & feedback'),
                       subtitle: const Text('Locate a lost phone, or tell us what to improve.'),
                       trailing: const Icon(Icons.chevron_right),
-                      onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => SupportScreen(location: w.location))),
+                      onTap: () => _openPremiumScreen(context, w.api, () => SupportScreen(api: w.api, location: w.location)),
                     ),
                   ),
                   const SizedBox(height: 16),
