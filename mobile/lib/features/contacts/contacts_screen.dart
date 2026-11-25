@@ -11,6 +11,8 @@ import '../../core/emergency.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/net/api.dart';
 import '../../core/phone.dart';
+import '../billing/premium_state.dart';
+import '../billing/upgrade_screen.dart';
 import '../photos/photo_contacts.dart';
 import '../sos/contact_people.dart';
 import '../sos/guardian_badges.dart';
@@ -107,6 +109,11 @@ class _ContactsScreenState extends State<ContactsScreen> {
       return;
     }
     if (!mounted) return;
+    // Unlocked accounts keep the 5-contact safety limit; Premium removes it.
+    if (!PremiumState.freeBuild && !PremiumState.premium && saved.length >= 5) {
+      await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => UpgradeScreen(api: widget.api)));
+      return;
+    }
     // A plain final local copy: the builder closure below must not receive the nullable.
     final List<ContactStatus> fresh = saved;
     await showModalBottomSheet<bool>(
