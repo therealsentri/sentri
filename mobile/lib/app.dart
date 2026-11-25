@@ -11,6 +11,8 @@ import 'core/widgets/flat.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
 import 'features/home/home_screen.dart';
+import 'features/billing/premium_state.dart';
+import 'features/billing/upgrade_screen.dart';
 import 'features/location/place_lookup.dart';
 import 'features/map/map_screen.dart';
 import 'features/police/police_directory.dart';
@@ -191,7 +193,19 @@ class _TabsState extends State<_Tabs> {
         icons: const [Icons.home_outlined, Icons.map_outlined, Icons.monitor_heart_outlined, Icons.local_police_outlined],
         selected: const [Icons.home, Icons.map, Icons.monitor_heart, Icons.local_police],
         index: _tab,
-        onTap: (i) => setState(() => _tab = i),
+        onTap: (i) async {
+          // The Health tab carries the whole premium suite: heart camera,
+          // water reminders, exercise, awards, gyms. Safety tabs stay open.
+          if (i == 2 && !PremiumState.freeBuild) {
+            await PremiumState.refresh();
+            if (!PremiumState.premium) {
+              if (!context.mounted) return;
+              await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => UpgradeScreen(api: s.api)));
+              return;
+            }
+          }
+          setState(() => _tab = i);
+        },
       ),
     );
   }
