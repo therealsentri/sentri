@@ -34,7 +34,7 @@ jobs:
       - name: Patch Gradle (minSdk 26, core library desugaring)
         run: |
           python3 - <<'PY'
-          import re
+          import os, re
           kts, groovy = 'android/app/build.gradle.kts', 'android/app/build.gradle'
           path = kts if os.path.exists(kts) else groovy
           s = open(path).read()
