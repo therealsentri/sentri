@@ -11,6 +11,8 @@ export interface AppDeps {
   startLimiter: FixedWindowLimiter;
   /** Not used any more: contacts no longer answer through public links. Kept optional so callers need no change. */
   ackLimiter?: FixedWindowLimiter;
+  /** v53: ring the owner's own devices (Find my phone). */
+  ring?: (uid: string) => Promise<boolean>;
   /** Optional. Without it the lookup route answers 404 and apps show coordinates only. */
   geocoder?: ReverseGeocoder;
   geoLimiter?: FixedWindowLimiter;
@@ -160,6 +162,15 @@ export function buildApp(d: AppDeps): FastifyInstance {
     const g = Geo.partial().parse(req.body ?? {});
     const geo = g.lat !== undefined && g.lon !== undefined ? { lat: g.lat, lon: g.lon, accuracyM: g.accuracyM, at: Date.now() } : undefined;
     return reply.send(await d.engine.healthAlert(uid, geo));
+  });
+
+  // v53: Sentri's own Find my phone — a high-priority ring on the owner's
+  // devices through our push network, never Google's Find My Device.
+  app.post('/v1/me/ring', async (req, reply) => {
+    const uid = await d.authenticate(req);
+    if (!uid) return reply.code(401).send({ error: 'unauthorized' });
+    const ok = d.ring ? await d.ring(uid) : false;
+    return { ok };
   });
 
   app.get('/healthz', async () => ({ ok: true }));
