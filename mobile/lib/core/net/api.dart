@@ -202,6 +202,7 @@ abstract class SentriApi {
   // v51: purchases. Defaults keep existing test doubles working.
   Future<Map<String, dynamic>> billingStatus() async => {'plan': 'free', 'expiresAt': null};
   Future<String> billingCheckout(String rail, String plan) async => throw UnimplementedError();
+  Future<bool> ringMyPhone() async => false;
 }
 
 /// Tokens, persisted in secure storage.
@@ -659,6 +660,12 @@ class HttpSentriApi implements SentriApi {
   Future<String> billingCheckout(String rail, String plan) async {
     final j = _json(await _call('POST', '/v1/billing/checkout', body: {'rail': rail, 'plan': plan}));
     return j['url'] as String? ?? '';
+  }
+
+  @override
+  Future<bool> ringMyPhone() async {
+    final j = _json(await _call('POST', '/v1/me/ring'));
+    return j['ok'] is bool ? j['ok'] as bool : false;
   }
 }
 
