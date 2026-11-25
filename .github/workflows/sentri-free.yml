@@ -1,0 +1,89 @@
+name: Build Sentri FREE (Vic)
+
+# Manual only. Builds the full-access copy for Vic: every feature unlocked.
+on:
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Generate Android scaffolding, keep our own sources
+        run: |
+          cp -R android/app/src/main /tmp/our_main
+          flutter create . --org ng.sentri --project-name sentri --platforms=android
+          cp -R /tmp/our_main/. android/app/src/main/
+          rm -f test/widget_test.dart
+
+      - name: Patch Gradle (minSdk 26, core library desugaring)
+        run: |
+          python3 - <<'PY'
+          import re
+          kts, groovy = 'android/app/build.gradle.kts', 'android/app/build.gradle'
+          path = kts if os.path.exists(kts) else groovy
+          s = open(path).read()
+          s = re.sub(r'flutter\.minSdkVersion', '26', s)
+          if path == kts:
+              if 'isCoreLibraryDesugaringEnabled' not in s:
+                  s = s.replace('compileOptions {', 'compileOptions {\n        isCoreLibraryDesugaringEnabled = true', 1)
+              if 'coreLibraryDesugaring(' not in s:
+                  s += '\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n}\n'
+          else:
+              if 'coreLibraryDesugaringEnabled' not in s:
+                  s = s.replace('compileOptions {', 'compileOptions {\n        coreLibraryDesugaringEnabled true', 1)
+              if 'coreLibraryDesugaring ' not in s:
+                  s += "\ndependencies {\n    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'\n}\n"
+          open(path, 'w').write(s)
+          PY
+
+      - name: Get packages
+        run: flutter pub get
+
+      - name: Unit tests
+        run: flutter test 2>&1 | tee "$GITHUB_WORKSPACE/test.log"
+        continue-on-error: true
+
+      - name: Build the FREE APK (all features unlocked for Vic)
+        run: |
+          set +e
+          DEFINE="--dart-define=API_BASE_URL=https://sentri-api.onrender.com --dart-define=SENTRI_FREE_BUILD=true"
+          flutter build apk --release --obfuscate --split-debug-info=build/symbols $DEFINE 2>&1 | tee "$GITHUB_WORKSPACE/build.log"
+          exit "${PIPESTATUS[0]}"
+
+      - name: Upload FREE APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sentri-free
+          path: mobile/build/app/outputs/flutter-apk/*.apk
+
+      - name: Show errors
+        if: always()
+        working-directory: .
+        run: |
+          python3 - <<'PY'
+          import os, re
+          W = os.environ.get('GITHUB_WORKSPACE', '.')
+          p = os.path.join(W, 'build.log')
+          if os.path.exists(p):
+              L = open(p, errors='replace').read().splitlines()
+              pat = re.compile(r'(error|Error:|FAILURE|Execution failed|Could not|Unresolved|^e: |Exception)')
+              for l in [x for x in L if pat.search(x)][:40]:
+                  print('::error title=build::' + l.replace('%','%25').replace('\r','').replace('\n','%0A'))
+          PY
