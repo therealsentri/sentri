@@ -1,5 +1,5 @@
-# Render Blueprint: deploys the Sentri backend as a private TEST server (free plan, data kept in memory).
-# Sign-up codes go through the Telegram bot. SOS alerts are only logged (SMS_PROVIDER=mock): do not rely on this for real alerts.
+# Render Blueprint: Sentri backend (production values match the running service).
+# Secrets stay in Render's environment; they are never written in this file.
 services:
   - type: web
     name: sentri-api
@@ -10,8 +10,6 @@ services:
     dockerContext: .
     healthCheckPath: /healthz
     autoDeploy: true
-    # Redeploy only when the server's own files change. An app-only update then leaves the running server alone
-    # (on the free plan a restart clears everything the server holds in memory).
     buildFilter:
       paths:
         - backend/**
@@ -20,19 +18,30 @@ services:
       - key: NODE_ENV
         value: development
       - key: STORE
-        value: memory
+        value: postgres
       - key: OTP_PROVIDER
         value: telegram
       - key: SMS_PROVIDER
         value: mock
+      - key: PUSH_PROVIDER
+        value: fcm
       - key: TRUST_PROXY_HOPS
         value: "1"
-      # Made by Render once and kept. The Telegram webhook secret is derived from TOKEN_SECRET.
+      # Existing secret values in Render are retained.
+      - key: DATABASE_URL
+        sync: false
+      - key: DATA_KEY
+        sync: false
+      - key: PHONE_HMAC_KEY
+        sync: false
+      - key: JWT_SECRET
+        sync: false
       - key: TOKEN_SECRET
-        generateValue: true
+        sync: false
       - key: PIN_PEPPER
-        generateValue: true
-      # Render asks for these two when you create the Blueprint. They come from @BotFather.
+        sync: false
+      - key: FCM_SERVICE_ACCOUNT_B64
+        sync: false
       - key: TELEGRAM_BOT_TOKEN
         sync: false
       - key: TELEGRAM_BOT_USERNAME
