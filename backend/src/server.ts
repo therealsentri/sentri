@@ -232,6 +232,7 @@ const app = buildApp({
     return null;
   },
   startLimiter: new FixedWindowLimiter(10, 3_600_000, clock),
+  ring: async (uid) => push.sendToUser(uid, { kind: 'sos', text: 'Find my phone — your Sentri alarm is ringing.' }),
   ackLimiter: new FixedWindowLimiter(60, 60_000, clock),
   logger: false,
   trustProxyHops: env.TRUST_PROXY_HOPS,
