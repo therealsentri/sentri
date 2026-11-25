@@ -14,7 +14,7 @@ export interface BillingStatus {
 export const TRIAL_DAYS = 14;
 const PAID = new Set(['monthly', 'yearly', 'family']);
 export function isPremium(s: Pick<BillingStatus, 'plan' | 'expiresAt' | 'trialEndsAt'>, now = Date.now()): boolean {
-  if (PAID.has(s.plan) && (!s.expiresAt || new Date(s.expiresAt).getTime() > now)) return true;
+  if (PAID.has(s.plan) && !!s.expiresAt && new Date(s.expiresAt).getTime() > now) return true;
   return !!s.trialEndsAt && new Date(s.trialEndsAt).getTime() > now;
 }
 
@@ -32,8 +32,13 @@ export class PgBillingStore implements BillingStore {
     const row = r.rows[0] as { plan?: string; expiresAt?: Date | string | null; trialStartedAt?: Date | string | null } | undefined;
     let started = row?.trialStartedAt ? new Date(row.trialStartedAt) : null;
     if (!started || Number.isNaN(started.getTime())) {
-      await this.pool.query('UPDATE users SET trial_started_at=now() WHERE id=$1 AND trial_started_at IS NULL', [uid]);
-      started = new Date();
+      // Use the database clock value, not the app clock, so the reported end
+      // always matches the stored start even across restarts.
+      const set = await this.pool.query(
+        'UPDATE users SET trial_started_at=now() WHERE id=$1 AND trial_started_at IS NULL RETURNING trial_started_at AS "trialStartedAt"',
+        [uid],
+      );
+      started = new Date(set.rows[0]?.trialStartedAt ?? Date.now());
     }
     const trialEndsAt = new Date(started.getTime() + TRIAL_DAYS * 86_400_000).toISOString();
     const s = { plan: row?.plan ?? 'free', expiresAt: row?.expiresAt ? String(row.expiresAt) : null, trialEndsAt };
@@ -128,7 +133,9 @@ export function registerBillingRoutes(app: FastifyInstance, deps: Deps): Fastify
       if (!uid) return reply.code(401).send({ error: 'unauthorized' });
       const b = (req.body ?? {}) as { rail?: string; plan?: string };
       const rail = b.rail === 'creem' ? 'creem' : 'paystack';
-      const plan = b.plan && b.plan in PAYSTACK_PLANS ? b.plan as keyof typeof PAYSTACK_PLANS : 'monthly';
+      // International checkout sells exactly one product ($2.99 monthly).
+      // A client cannot choose "family" here and upgrade itself for $2.99.
+      const plan = rail === 'creem' ? 'monthly' : (b.plan && b.plan in PAYSTACK_PLANS ? b.plan as keyof typeof PAYSTACK_PLANS : 'monthly');
       if (rail === 'paystack') {
         const secret = process.env.PAYSTACK_SECRET_KEY;
         if (!secret) return reply.code(503).send({ error: 'payments_not_configured' });
@@ -180,8 +187,8 @@ export function registerBillingRoutes(app: FastifyInstance, deps: Deps): Fastify
             const d = j.data;
             if (d?.status === 'success' && d.metadata?.uid && d.metadata.plan && d.metadata.plan in PAYSTACK_PLANS) {
               const p = PAYSTACK_PLANS[d.metadata.plan as keyof typeof PAYSTACK_PLANS];
-              if (d.amount === p.amount && d.currency === p.currency) {
-                await deps.store.activate(d.metadata.uid, d.metadata.plan, p.days, reference, d.amount, d.currency);
+              if (Number(d.amount) === p.amount && d.currency === p.currency) {
+                await deps.store.activate(d.metadata.uid, d.metadata.plan, p.days, reference, p.amount, p.currency);
               }
             }
           }
@@ -192,7 +199,10 @@ export function registerBillingRoutes(app: FastifyInstance, deps: Deps): Fastify
 
     child.post('/v1/billing/paystack/webhook', async (req, reply) => {
       const raw = (req as FastifyRequest & { rawBody?: Buffer }).rawBody ?? Buffer.from(JSON.stringify(req.body ?? {}));
-      const secret = process.env.PAYSTACK_SECRET_KEY ?? '';
+      const secret = process.env.PAYSTACK_SECRET_KEY;
+      // No configured secret means this webhook cannot be authenticated: reject it
+      // outright rather than computing a signature with an empty key.
+      if (!secret) return reply.code(401).send({ error: 'bad_signature' });
       const expected = createHmac('sha512', secret).update(raw).digest('hex');
       const got = req.headers['x-paystack-signature'];
       if (!sigOk(expected, typeof got === 'string' ? got : undefined)) return reply.code(401).send({ error: 'bad_signature' });
@@ -202,25 +212,30 @@ export function registerBillingRoutes(app: FastifyInstance, deps: Deps): Fastify
       const plan = d.metadata?.plan;
       if (!d.reference || !d.metadata?.uid || !plan || !(plan in PAYSTACK_PLANS)) return { received: true };
       const p = PAYSTACK_PLANS[plan as keyof typeof PAYSTACK_PLANS];
-      if (d.amount !== p.amount || d.currency !== p.currency) return reply.code(400).send({ error: 'amount_mismatch' });
+      if (Number(d.amount) !== p.amount || d.currency !== p.currency) return reply.code(400).send({ error: 'amount_mismatch' });
       const ok = await deps.store.activate(d.metadata.uid, plan, p.days, d.reference, d.amount!, d.currency!);
       return { received: true, activated: ok };
     });
 
     child.post('/v1/billing/creem/webhook', async (req, reply) => {
       const raw = (req as FastifyRequest & { rawBody?: Buffer }).rawBody ?? Buffer.from(JSON.stringify(req.body ?? {}));
-      const secret = process.env.CREEM_WEBHOOK_SECRET ?? '';
+      const secret = process.env.CREEM_WEBHOOK_SECRET;
+      // Same rule as Paystack: an unconfigured secret must never verify a webhook.
+      if (!secret) return reply.code(401).send({ error: 'bad_signature' });
       const expected = createHmac('sha256', secret).update(raw).digest('hex');
       const got = req.headers['creem-signature'] ?? req.headers['x-creem-signature'];
       if (!sigOk(expected, typeof got === 'string' ? got : undefined)) return reply.code(401).send({ error: 'bad_signature' });
-      const ev = (req.body ?? {}) as { eventType?: string; event?: string; data?: { id?: string; metadata?: { uid?: string; plan?: string } } };
+      const ev = (req.body ?? {}) as { eventType?: string; event?: string; data?: { id?: string; product_id?: string; amount?: number; currency?: string; metadata?: { uid?: string } } };
       const type = ev.eventType ?? ev.event ?? '';
       if (!/checkout.completed|subscription.active|paid/i.test(type)) return { received: true };
       const d = ev.data;
-      const plan = d?.metadata?.plan;
-      if (!d?.id || !d.metadata?.uid || !plan || !(plan in PAYSTACK_PLANS)) return { received: true };
-      const p = PAYSTACK_PLANS[plan as keyof typeof PAYSTACK_PLANS];
-      const ok = await deps.store.activate(d.metadata.uid, plan, p.days, d.id, 299, 'USD');
+      // Only the $2.99 monthly product can grant Premium here. Ignore any
+      // client-sent plan metadata entirely.
+      if (d?.product_id && d.product_id !== CREEM_PRODUCT_ID) return { received: true };
+      if (d?.amount != null && Number(d.amount) !== 299) return reply.code(400).send({ error: 'amount_mismatch' });
+      if (d?.currency && d.currency !== 'USD') return reply.code(400).send({ error: 'amount_mismatch' });
+      if (!d?.id || !d.metadata?.uid) return { received: true };
+      const ok = await deps.store.activate(d.metadata.uid, 'monthly', PAYSTACK_PLANS.monthly.days, d.id, 299, 'USD');
       return { received: true, activated: ok };
     });
   });

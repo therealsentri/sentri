@@ -1,5 +1,5 @@
 import type { Pool } from 'pg';
-import type { Admin, AdminActions, AreaRow, DirectoryEdit, DirectoryRow, AdminRequest, AdminStore, Approval, RequestState, SosSummary } from './types.js';
+import type { Admin, AdminActions, AdminStats, AreaRow, DirectoryEdit, DirectoryRow, AdminRequest, AdminStore, Approval, RequestState, SosSummary } from './types.js';
 
 const toAdmin = (r: Record<string, any>): Admin => ({
   id: r.id, email: r.email, password: r.password, totpEnc: r.totp_enc, failedLogins: r.failed_logins,
@@ -156,5 +156,46 @@ export class PgAdminActions implements AdminActions {
       endedAt: x.ended_at == null ? undefined : Number(x.ended_at),
       lastGeo: x.last_geo ? { lat: x.last_geo.lat, lon: x.last_geo.lon, at: x.last_geo.at } : undefined,
     }));
+  }
+
+  /**
+   * Console overview. Every value that can vary is a bound parameter ($1..$5);
+   * no user-supplied text is ever concatenated into SQL.
+   */
+  async stats(now: number): Promise<AdminStats> {
+    const trialCutoff = new Date(now - 14 * 86_400_000).toISOString();
+    const weekCutoff = now - 7 * 86_400_000;
+    const dayCutoff = now - 86_400_000;
+    const monthCutoff = new Date(now - 30 * 86_400_000).toISOString();
+
+    const [users, newUsers, plans, trial, premium, sosDay, sosActive, events, revenue, byPlan] = await Promise.all([
+      this.pool.query('SELECT count(*)::int AS n FROM users WHERE deleted_at IS NULL'),
+      this.pool.query('SELECT count(*)::int AS n FROM users WHERE deleted_at IS NULL AND created_at > $1', [weekCutoff]),
+      this.pool.query('SELECT plan, count(*)::int AS n FROM users WHERE deleted_at IS NULL GROUP BY plan'),
+      this.pool.query('SELECT count(*)::int AS n FROM users WHERE deleted_at IS NULL AND plan = $1 AND trial_started_at > $2', ['free', trialCutoff]),
+      this.pool.query('SELECT count(*)::int AS n FROM users WHERE deleted_at IS NULL AND plan <> $1 AND plan_expires_at > $2', ['free', new Date(now).toISOString()]),
+      this.pool.query('SELECT count(*)::int AS n FROM sos_events WHERE started_at > $1', [dayCutoff]),
+      this.pool.query("SELECT count(*)::int AS n FROM sos_events WHERE state IN ('countdown','active')"),
+      this.pool.query('SELECT count(*)::int AS n FROM billing_events WHERE created_at > $1', [monthCutoff]),
+      this.pool.query('SELECT currency, coalesce(sum(amount),0)::bigint AS total FROM billing_events WHERE created_at > $1 GROUP BY currency', [monthCutoff]),
+      this.pool.query('SELECT plan, count(*)::int AS n FROM billing_events WHERE created_at > $1 GROUP BY plan', [monthCutoff]),
+    ]);
+
+    return {
+      generatedAt: now,
+      users: {
+        total: users.rows[0]?.n ?? 0,
+        new7d: newUsers.rows[0]?.n ?? 0,
+        trialActive: trial.rows[0]?.n ?? 0,
+        premiumActive: premium.rows[0]?.n ?? 0,
+      },
+      plans: plans.rows.map((x) => ({ plan: x.plan, count: x.n })),
+      sos: { last24h: sosDay.rows[0]?.n ?? 0, active: sosActive.rows[0]?.n ?? 0 },
+      billing: {
+        events30d: events.rows[0]?.n ?? 0,
+        revenue: revenue.rows.map((x) => ({ currency: x.currency, amountMinor: Number(x.total) })),
+        byPlan: byPlan.rows.map((x) => ({ plan: x.plan, count: x.n })),
+      },
+    };
   }
 }

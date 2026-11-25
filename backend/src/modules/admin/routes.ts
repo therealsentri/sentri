@@ -80,6 +80,7 @@ export function registerAdminRoutes(app: FastifyInstance, d: { admin: AdminServi
       .header('referrer-policy', 'no-referrer')
       .send(ADMIN_HTML));
 
+  app.get('/admin/v1/stats', guarded(async () => ({ stats: await d.admin.stats() })));
   app.get('/admin/v1/directory', guarded(async () => ({ rooms: await d.admin.directory() })));
   app.get('/admin/v1/areas', guarded(async () => ({ areas: await d.admin.areas() })));
   app.get('/admin/v1/admins', guarded(async () => ({ admins: await d.admin.admins() })));

@@ -48,7 +48,7 @@ Future<void> _openPremiumScreen(BuildContext context, SentriApi api, Widget Func
   }
   await PremiumState.refresh();
   if (!context.mounted) return;
-  if (PremiumState.premium) {
+  if (PremiumState.instance.premium) {
     await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => build()));
   } else {
     await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => UpgradeScreen(api: api)));
@@ -738,15 +738,18 @@ class _ShortcutsPage extends StatelessWidget {
                     ]),
                   ),
                   const SizedBox(height: 16),
-                  Card(
-                    child: ListTile(
-                      leading: Icon(Icons.workspace_premium_outlined, color: cs.primary),
-                      title: Text('Sentri Premium · ${PremiumState.label}'),
-                      subtitle: Text(PremiumState.premium && PremiumState.plan == 'free'
-                          ? 'Full access during your 14-day trial.'
-                          : 'Travel, health suite, history and more.'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => UpgradeScreen(api: w.api))),
+                  ListenableBuilder(
+                    listenable: PremiumState.instance,
+                    builder: (context, _) => Card(
+                      child: ListTile(
+                        leading: Icon(Icons.workspace_premium_outlined, color: cs.primary),
+                        title: Text('Sentri Premium · ${PremiumState.instance.label}'),
+                        subtitle: Text(PremiumState.instance.premium && PremiumState.instance.plan == 'free'
+                            ? 'Full access during your 14-day trial.'
+                            : 'Travel, health suite, history and more.'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => UpgradeScreen(api: w.api))),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),

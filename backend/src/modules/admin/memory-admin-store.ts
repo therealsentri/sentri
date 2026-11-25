@@ -1,4 +1,4 @@
-import type { Admin, AdminActions, AreaRow, DirectoryEdit, DirectoryRow, AdminRequest, AdminStore, Approval, RequestState, SosSummary } from './types.js';
+import type { Admin, AdminActions, AdminStats, AreaRow, DirectoryEdit, DirectoryRow, AdminRequest, AdminStore, Approval, RequestState, SosSummary } from './types.js';
 import { NIGERIA_STATES } from './areas.js';
 import type { MemorySosStore } from '../sos/memory-store.js';
 
@@ -94,5 +94,15 @@ export class MemoryAdminActions implements AdminActions {
       .sort((a, b) => b.startedAt - a.startedAt)
       .slice(0, limit)
       .map((e) => ({ id: e.id, state: e.state, trigger: e.trigger, startedAt: e.startedAt, endedAt: e.endedAt, lastGeo: e.lastGeo ? { lat: e.lastGeo.lat, lon: e.lastGeo.lon, at: e.lastGeo.at } : undefined }));
+  }
+  async stats(now: number): Promise<AdminStats> {
+    const events = this.sos.allEvents();
+    return {
+      generatedAt: now,
+      users: { total: 0, new7d: 0, trialActive: 0, premiumActive: 0 },
+      plans: [],
+      sos: { last24h: events.filter((e) => e.startedAt > now - 86_400_000).length, active: events.filter((e) => e.state === 'active' || e.state === 'countdown').length },
+      billing: { events30d: 0, revenue: [], byPlan: [] },
+    };
   }
 }

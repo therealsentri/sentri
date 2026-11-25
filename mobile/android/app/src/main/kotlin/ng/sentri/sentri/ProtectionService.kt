@@ -101,6 +101,8 @@ class ProtectionService : Service() {
         if (p.power) holdWake() else releaseWake()
 
         shake?.unregister(sm); shake = null
+        // v55: the shake trigger was declared but never registered on Android.
+        if (p.shake) shake = ShakeDetector(p.shakeSensitivity) { TriggerDispatcher.fire(this, "shake") }.also { it.register(sm) }
 
         power?.unregister(this); power = null
         // v44: the press count is the person's own choice (3..6), so the alert only goes off on

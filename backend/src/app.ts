@@ -13,6 +13,8 @@ export interface AppDeps {
   ackLimiter?: FixedWindowLimiter;
   /** v53: ring the owner's own devices (Find my phone). */
   ring?: (uid: string) => Promise<boolean>;
+  /** v55: cap ring attempts so the push network cannot be abused. */
+  ringLimiter?: FixedWindowLimiter;
   /** Optional. Without it the lookup route answers 404 and apps show coordinates only. */
   geocoder?: ReverseGeocoder;
   geoLimiter?: FixedWindowLimiter;
@@ -169,6 +171,7 @@ export function buildApp(d: AppDeps): FastifyInstance {
   app.post('/v1/me/ring', async (req, reply) => {
     const uid = await d.authenticate(req);
     if (!uid) return reply.code(401).send({ error: 'unauthorized' });
+    if (d.ringLimiter && !d.ringLimiter.allow(`ring:${uid}`)) return reply.code(429).send({ error: 'rate_limited' });
     const ok = d.ring ? await d.ring(uid) : false;
     return { ok };
   });

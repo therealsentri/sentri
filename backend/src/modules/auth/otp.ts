@@ -14,6 +14,9 @@ export interface OtpRecord {
 export interface OtpStore {
   create(c: { id: string; phoneHmac: Buffer; codeHash: Buffer; createdAt: number; expiresAt: number }): Promise<void>;
   latest(phoneHmac: Buffer): Promise<OtpRecord | null>;
+  /** Every still-usable challenge for a number. Older codes stay valid until their own TTL ends
+   * (e.g. a person acts on an earlier Telegram message after asking for a fresh code). */
+  allValid(phoneHmac: Buffer, now: number, maxAttempts: number): Promise<OtpRecord[]>;
   /** Adds one guess and returns the new total. Must be atomic, so guesses sent together can't each see the old count. */
   bumpAttempts(id: string): Promise<number>;
   /** Marks consumed; false if it was already consumed (so a code can't be used twice). */
@@ -84,18 +87,21 @@ export class OtpService {
     });
   }
 
-  /** True only for the latest, unexpired, unconsumed challenge with the right code. */
+  /** True for any unexpired, unconsumed challenge for this number with the right code.
+   * Each code keeps its own five-guess budget and its own five-minute life. */
   async verify(phone: string, code: string): Promise<boolean> {
     const now = this.clock();
-    const rec = await this.store.latest(this.fc.blindIndex(phone));
-    if (!rec || rec.consumedAt || rec.expiresAt <= now || rec.attempts >= this.opts.maxAttempts) return false;
-    // Count the guess BEFORE checking it, and act on the new total. Guesses sent at the same moment each get
-    // their own number, so only the first few are ever compared, whatever the timing.
-    if ((await this.store.bumpAttempts(rec.id)) > this.opts.maxAttempts) return false;
     if (!/^\d{6}$/.test(code)) return false;
-    const given = this.hashCode(rec.id, code);
-    if (given.length !== rec.codeHash.length || !timingSafeEqual(given, rec.codeHash)) return false;
-    return this.store.consume(rec.id, now);
+    const recs = await this.store.allValid(this.fc.blindIndex(phone), now, this.opts.maxAttempts);
+    for (const rec of recs) {
+      // Count the guess BEFORE comparing, and act on the new total. Guesses sent at the same moment
+      // each get their own number, so only the first few are ever compared, whatever the timing.
+      if ((await this.store.bumpAttempts(rec.id)) > this.opts.maxAttempts) continue;
+      const given = this.hashCode(rec.id, code);
+      if (given.length !== rec.codeHash.length || !timingSafeEqual(given, rec.codeHash)) continue;
+      return this.store.consume(rec.id, now);
+    }
+    return false;
   }
 }
 
@@ -109,6 +115,11 @@ export class MemoryOtpStore implements OtpStore {
   async latest(phoneHmac: Buffer): Promise<OtpRecord | null> {
     const mine = this.rows.filter((r) => r.phoneHmac.equals(phoneHmac));
     return mine.at(-1) ?? null;
+  }
+  async allValid(phoneHmac: Buffer, now: number, maxAttempts: number): Promise<OtpRecord[]> {
+    return this.rows
+      .filter((r) => r.phoneHmac.equals(phoneHmac) && !r.consumedAt && r.expiresAt > now && r.attempts < maxAttempts)
+      .sort((a, b) => b.createdAt - a.createdAt);
   }
   async bumpAttempts(id: string): Promise<number> {
     const r = this.rows.find((x) => x.id === id);

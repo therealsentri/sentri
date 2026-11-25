@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cryptography_flutter/cryptography_flutter.dart';
 import 'package:flutter/material.dart';
 
@@ -6,17 +8,66 @@ import 'core/poppins.dart';
 import 'features/billing/premium_state.dart';
 import 'services.dart';
 
-Future<void> main() async {
+/// v55: render something on the very first frame. Every slow or failing
+/// startup step happens after runApp, so the app can never show a blank screen.
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  // Use the platform's native crypto (much faster PBKDF2 for the PIN check inside the cancel window).
   FlutterCryptography.enable();
-  // Register the bundled Inter faces before the first frame, so even the splash paints with
-  // the brand font, offline, on the very first launch.
-  // v40: Poppins is the app's typeface everywhere now. Registered the same way - bundled
-  // base64 faces loaded into the engine before the first frame, so nothing is fetched.
-  await BrandPoppins.ensure();
-  final services = await AppServices.create();
-  PremiumState.bind(services.api);
-  await PremiumState.refresh();
-  runApp(SentriApp(services: services));
+  final holder = ValueNotifier<Widget>(const _BootScreen());
+  runApp(ValueListenableBuilder<Widget>(
+    valueListenable: holder,
+    builder: (_, child, __) => child,
+  ));
+  unawaited(_boot(holder));
+}
+
+Future<void> _boot(ValueNotifier<Widget> holder) async {
+  try {
+    await BrandPoppins.ensure().catchError((_) {});
+    final services = await AppServices.create();
+    PremiumState.bind(services.api);
+    // Never block the first frame on billing; refresh in the background.
+    unawaited(PremiumState.refresh());
+    holder.value = SentriApp(services: services);
+  } catch (e, st) {
+    debugPrint('startup failed: $e\n$st');
+    holder.value = _BootError(onRetry: () => unawaited(_boot(holder)));
+  }
+}
+
+class _BootScreen extends StatelessWidget {
+  const _BootScreen();
+  @override
+  Widget build(BuildContext context) => const MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: CircularProgressIndicator(color: Color(0xFF0E08A3)),
+          ),
+        ),
+      );
+}
+
+class _BootError extends StatelessWidget {
+  const _BootError({required this.onRetry});
+  final VoidCallback onRetry;
+  @override
+  Widget build(BuildContext context) => MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Sentri could not start', textAlign: TextAlign.center, style: TextStyle(fontSize: 20)),
+                  const SizedBox(height: 10),
+                  const Text('Your data is safe. Check your connection and try again.', textAlign: TextAlign.center),
+                  const SizedBox(height: 18),
+                  FilledButton(onPressed: onRetry, child: const Text('Try again')),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
 }

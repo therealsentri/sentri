@@ -112,6 +112,11 @@ export class MemorySosStore implements SosStore, ConsentStore {
     return [...this.events.values()].filter((e) => e.userId === userId);
   }
 
+  /** All events, for the dev admin overview. */
+  allEvents(): SosEvent[] {
+    return [...this.events.values()];
+  }
+
   async setConsent(contactId: string, status: ConsentStatus): Promise<boolean> {
     for (const list of this.contacts.values()) {
       const c = list.find((x) => x.id === contactId);

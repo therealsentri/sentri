@@ -45,6 +45,13 @@ object TriggerDispatcher {
      * server call, tracking) while the phone is still asleep. Returns false if one just fired.
      */
     fun begin(context: Context, type: String): Boolean {
+        // "resume" is housekeeping (pending-SOS replay), never a user gesture.
+        // It must NOT consume the debounce or a real trigger fired moments later
+        // would be silently dropped.
+        if (type == "resume") {
+            SentriEngine.deliver(context, type)
+            return true
+        }
         if (!claim()) return false
         Log.i("Sentri", "trigger fired: $type")
         SentriEngine.deliver(context, type)

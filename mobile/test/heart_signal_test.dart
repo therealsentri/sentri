@@ -1,0 +1,91 @@
+import 'dart:math' as math;
+
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:sentri/features/health/heart_signal.dart';
+
+/// Synthetic fingertip-pulse signal: `bpm` beats per minute sampled at 25 frames per
+/// second for `secs`, with slow drift (like the light changing), optional beat-to-beat
+/// jitter (a real heart is not a metronome) and noise on top.
+List<double> fakeFingertipSignal(
+  double bpm,
+  double fps,
+  double secs, [
+  double noise = 6.0,
+  double jitterPct = 0.0,
+]) {
+  final rnd = math.Random(7);
+  final n = (fps * secs).round();
+  final out = <double>[];
+  var beatPos = 0.0;
+  final beatLen = 60.0 / bpm;
+  for (var i = 0; i < n; i++) {
+    final t = i / fps;
+    // Advance a beat clock with gentle per-beat jitter so peaks are not metronomic.
+    final where = (t / beatLen + beatPos * jitterPct * math.sin(t * 2 * math.pi / 7.0)) % 1.0;
+    // One strong systolic bump per beat (plus a smaller dicrotic tail, like real skin).
+    final pulse = math.sin(2 * math.pi * where) * 24.0 + math.sin(4 * math.pi * where + 1.2) * 6.0;
+    final drift = 6.0 * math.sin(2 * math.pi * 0.05 * t) + t * 0.4;
+    out.add(128.0 + drift + pulse + (rnd.nextDouble() - 0.5) * noise);
+  }
+  return out;
+}
+
+void main() {
+  test('a clean fingertip signal comes out near the true rate', () {
+    const fps = 25.0;
+    final raw = smoothMedian3(fakeFingertipSignal(72, fps, 30));
+    final ys = detrend(raw, (fps * 1.5).round());
+    final bpm = bpmFromSamples(ys, fps);
+    expect(bpm, isNotNull);
+    expect(bpm!, greaterThanOrEqualTo(68));
+    expect(bpm, lessThanOrEqualTo(76));
+  });
+
+  test('the reading is precise: within 2 bpm of the true rate', () {
+    const fps = 25.0;
+    for (final bpm in {64.0, 72.0, 88.0, 110.0}) {
+      final ys = detrend(smoothMedian3(fakeFingertipSignal(bpm, fps, 30)), (fps * 1.5).round());
+      final got = bpmFromSamples(ys, fps);
+      expect(got, isNotNull);
+      expect((got! - bpm).abs(), lessThan(2.5), reason: 'true $bpm read as $got');
+    }
+  });
+
+  test('a natural, slightly irregular pulse still reads true', () {
+    const fps = 25.0;
+    final ys = detrend(smoothMedian3(fakeFingertipSignal(76, fps, 30, 8.0, 0.04)), (fps * 1.5).round());
+    final got = bpmFromSamples(ys, fps);
+    expect(got, isNotNull);
+    expect((got! - 76).abs(), lessThan(4.0), reason: 'read as $got');
+  });
+
+  test('a faster pulse is found as faster', () {
+    const fps = 25.0;
+    final a = detrend(smoothMedian3(fakeFingertipSignal(60, fps, 30)), (fps * 1.5).round());
+    final b = detrend(smoothMedian3(fakeFingertipSignal(95, fps, 30)), (fps * 1.5).round());
+    final ba = bpmFromSamples(a, fps);
+    final bb = bpmFromSamples(b, fps);
+    expect(ba, isNotNull);
+    expect(bb, isNotNull);
+    expect(bb!, greaterThan(ba!));
+  });
+
+  test('flat noise is not dressed up as a pulse', () {
+    const fps = 25.0;
+    final rnd = math.Random(3);
+    final flat = List<double>.generate(750, (_) => 128.0 + (rnd.nextDouble() - 0.5) * 0.4);
+    expect(bpmFromSamples(detrend(smoothMedian3(flat), 38), fps), isNull);
+  });
+
+  test('weak flat light near the threshold is also refused', () {
+    const fps = 25.0;
+    final rnd = math.Random(5);
+    final faint = List<double>.generate(750, (_) => 128.0 + (rnd.nextDouble() - 0.5) * 0.25);
+    expect(bpmFromSamples(detrend(smoothMedian3(faint), 38), fps), isNull);
+  });
+
+  test('too-short data is refused', () {
+    expect(bpmFromSamples(detrend(smoothMedian3(<double>[130, 131, 130, 129, 130]), 2), 25.0), isNull);
+  });
+}

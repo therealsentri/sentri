@@ -15,7 +15,7 @@ class UpgradeScreen extends StatefulWidget {
   State<UpgradeScreen> createState() => _UpgradeScreenState();
 }
 
-class _UpgradeScreenState extends State<UpgradeScreen> {
+class _UpgradeScreenState extends State<UpgradeScreen> with WidgetsBindingObserver {
   String _rail = 'paystack';
   String _plan = 'monthly';
   String? _current;
@@ -25,10 +25,27 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     PremiumState.refresh();
     widget.api.billingStatus().then((s) {
       if (mounted) setState(() => _current = s['plan'] as String? ?? 'free');
     }).catchError((_) {});
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      PremiumState.instance.refresh();
+      widget.api.billingStatus().then((s) {
+        if (mounted) setState(() => _current = s['plan'] as String? ?? 'free');
+      }).catchError((_) {});
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   static const _plans = [

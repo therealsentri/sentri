@@ -3,7 +3,7 @@ import type { AuditSink } from '../../domain/types.js';
 import type { FieldCrypto } from '../../lib/field-crypto.js';
 import { signAccessToken, verifyAccessToken } from '../auth/jwt.js';
 import { newTotpSecret, otpauthUri, verifyTotp } from './totp.js';
-import type { Admin, AdminActions, AdminSummary, AreaRow, DirectoryEdit, DirectoryRow, AdminRequest, AdminStore, Approval, RequestKind, SosSummary } from './types.js';
+import type { Admin, AdminActions, AdminStats, AdminSummary, AreaRow, DirectoryEdit, DirectoryRow, AdminRequest, AdminStore, Approval, RequestKind, SosSummary } from './types.js';
 
 /**
  * Two-person control. No admin can act alone on anything sensitive:
@@ -233,6 +233,7 @@ export class AdminService {
 
   directory(): Promise<DirectoryRow[]> { return this.actions.listDirectory(); }
   areas(): Promise<AreaRow[]> { return this.actions.listAreas(); }
+  stats(): Promise<AdminStats> { return this.actions.stats(this.clock()); }
   async admins(): Promise<AdminSummary[]> {
     return (await this.store.listAdmins()).map((a) => ({ id: a.id, email: a.email, active: !a.disabledAt }));
   }

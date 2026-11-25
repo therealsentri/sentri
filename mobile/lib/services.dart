@@ -94,7 +94,7 @@ class AppServices {
   final ValueListenable<bool> waking;
 
   /// The police directory, loaded once; the SOS screen and alert screens use it to show who to call.
-  final Future<PoliceDirectory> police = rootBundle.loadString('assets/directory/police_directory.json').then(PoliceDirectory.parse);
+  final Future<PoliceDirectory> police = rootBundle.loadString('assets/directory/police_directory.json').then(PoliceDirectory.parse).catchError((_) => PoliceDirectory(const []));
   StreamSubscription<List<ConnectivityResult>>? _net;
   late final PushService _push = PushService(api, onAlert: () => unawaited(inbox.refresh()));
 

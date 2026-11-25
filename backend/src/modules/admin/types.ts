@@ -77,6 +77,21 @@ export interface AdminActions {
   listAreas(): Promise<AreaRow[]>;
   /** Recent SOS events for a user: the minimum needed for an investigation. */
   recentEvents(userId: string, sinceMs: number, limit: number): Promise<SosSummary[]>;
+  /** Aggregate counts for the console overview. No phone numbers or other personal data. */
+  stats(now: number): Promise<AdminStats>;
+}
+
+/** Aggregate overview numbers. Amounts are in the smallest currency unit (kobo / cents). */
+export interface AdminStats {
+  generatedAt: number;
+  users: { total: number; new7d: number; trialActive: number; premiumActive: number };
+  plans: { plan: string; count: number }[];
+  sos: { last24h: number; active: number };
+  billing: {
+    events30d: number;
+    revenue: { currency: string; amountMinor: number }[];
+    byPlan: { plan: string; count: number }[];
+  };
 }
 
 export interface SosSummary {

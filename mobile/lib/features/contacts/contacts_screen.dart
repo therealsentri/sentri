@@ -110,7 +110,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
     }
     if (!mounted) return;
     // Unlocked accounts keep the 5-contact safety limit; Premium removes it.
-    if (!PremiumState.freeBuild && !PremiumState.premium && saved.length >= 5) {
+    if (!PremiumState.freeBuild && !PremiumState.instance.premium && saved.length >= 5) {
       await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => UpgradeScreen(api: widget.api)));
       return;
     }
@@ -477,13 +477,13 @@ class _AddSheetState extends State<_AddSheet> {
       ]);
       if (context.mounted) Navigator.of(context).pop(true);
     } on ApiHttpError catch (e) {
-      setState(() {
+      if (mounted) setState(() {
         _busy = false;
         // 400 means the server said no to the number(s); anything else is connection.
         _error = t(e.status == 400 ? 'contacts.invalid' : 'common.error');
       });
     } catch (_) {
-      setState(() {
+      if (mounted) setState(() {
         _busy = false;
         _error = t('common.error');
       });

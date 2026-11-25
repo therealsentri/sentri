@@ -153,7 +153,7 @@ class _TabsState extends State<_Tabs> {
     super.initState();
     // The same parsed directory backs the Police tab and aims the map's directions at the closest
     // command's post. Loading it once here keeps both users on one parse.
-    _directoryFuture = rootBundle.loadString('assets/directory/police_directory.json').then((raw) => PoliceDirectory.parse(raw));
+    _directoryFuture = rootBundle.loadString('assets/directory/police_directory.json').then((raw) => PoliceDirectory.parse(raw)).catchError((_) => PoliceDirectory(const []));
     unawaited(_directoryFuture!.then((d) {
       if (mounted) setState(() => _directory = d);
     }));
@@ -165,29 +165,31 @@ class _TabsState extends State<_Tabs> {
     final t = s.i18n.t;
     // All tabs stay built inside an IndexedStack, so switching to Home and back no longer
     // tears down the Map tab: an active route, its pin and its voice plan survive the switch.
-    final body = IndexedStack(
+    final buildBody = (BuildContext context, Widget? _) => IndexedStack(
       index: _tab,
       children: [
         HomeScreen(sos: s.sos, settings: s.settings, i18n: s.i18n, bridge: s.bridge, api: s.api, inbox: s.inbox, share: s.share, checkin: s.checkin, police: s.police, people: s.people, profile: s.profile, exercise: s.exercise, location: s.location),
         MapScreen(key: _mapKey, location: s.location, api: s.api, i18n: s.i18n, placeLookup: const DevicePlaceLookup(), onPlace: (p) => _state = p?.state, police: _directoryFuture, settings: s.settings, share: s.share),
-        HealthScreen(
-          health: s.health,
-          i18n: s.i18n,
-          exercise: s.exercise,
-          awards: s.awards,
-          checkin: s.checkin,
-          onRoute: (place) {
-            // Tap a hospital or gym in the Health tab: the map plans the route to it
-            // and the app switches to the Map tab, which is already warm.
-            _mapKey.currentState?.routeTo(LatLng(place.lat, place.lon), place.name);
-            setState(() => _tab = 1);
-          },
-        ),
+        // Free users never mount the premium Health screen: its water alarms
+        // and network calls stay behind the paywall.
+        PremiumState.freeBuild || PremiumState.instance.premium
+            ? HealthScreen(
+                health: s.health,
+                i18n: s.i18n,
+                exercise: s.exercise,
+                awards: s.awards,
+                checkin: s.checkin,
+                onRoute: (place) {
+                  _mapKey.currentState?.routeTo(LatLng(place.lat, place.lon), place.name);
+                  setState(() => _tab = 1);
+                },
+              )
+            : UpgradeScreen(api: s.api),
         PoliceScreen(directory: _directory, i18n: s.i18n, currentState: _state, country: _myCountry(s)),
       ],
     );
     return Scaffold(
-      body: body,
+      body: ListenableBuilder(listenable: PremiumState.instance, builder: buildBody),
       bottomNavigationBar: _PillNav(
         labels: [t('tabs.home'), t('tabs.map'), t('tabs.health'), t('tabs.police')],
         icons: const [Icons.home_outlined, Icons.map_outlined, Icons.monitor_heart_outlined, Icons.local_police_outlined],
@@ -198,7 +200,7 @@ class _TabsState extends State<_Tabs> {
           // water reminders, exercise, awards, gyms. Safety tabs stay open.
           if (i == 2 && !PremiumState.freeBuild) {
             await PremiumState.refresh();
-            if (!PremiumState.premium) {
+            if (!PremiumState.instance.premium) {
               if (!context.mounted) return;
               await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => UpgradeScreen(api: s.api)));
               return;

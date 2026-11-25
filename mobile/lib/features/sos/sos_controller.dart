@@ -179,7 +179,7 @@ class SosController extends ChangeNotifier {
       _serverOk = true;
       _waiting = false;
       unawaited(_deletePending());
-      if (_duress && _duressPin != null) unawaited(_syncPin(epoch, null, _duressPin!, config.pinRetries));
+      // submitPin() already syncs the duress PIN; don't send it twice.
       notifyListeners();
     } catch (_) {
       // Unreachable, 429, 5xx, auth trouble, even a garbled reply: keep trying, and keep the alert on the phone meanwhile.
@@ -307,19 +307,21 @@ class SosController extends ChangeNotifier {
 
   static const _pendingKey = 'sos.pending.v1';
 
-  Future<void> _savePending() async {
-    final store = pending;
-    if (store == null) return;
-    try {
-      await store.write(_pendingKey, jsonEncode({'t': _trigger, 'at': timers.now().millisecondsSinceEpoch}));
-    } catch (_) {}
-  }
+  Future<void> _pendingOp = Future.value();
 
-  Future<void> _deletePending() async {
-    try {
-      await pending?.delete(_pendingKey);
-    } catch (_) {}
-  }
+  Future<void> _savePending() => _pendingOp = _pendingOp.then((_) async {
+        final store = pending;
+        if (store == null) return;
+        try {
+          await store.write(_pendingKey, jsonEncode({'t': _trigger, 'at': timers.now().millisecondsSinceEpoch}));
+        } catch (_) {}
+      });
+
+  Future<void> _deletePending() => _pendingOp = _pendingOp.then((_) async {
+        try {
+          await pending?.delete(_pendingKey);
+        } catch (_) {}
+      });
 
   /// If the phone restarted (or the app was killed) while an alert had not reached the server, send it now.
   /// It skips the cancel window: the person has had their chance, and a late alert is better than none.

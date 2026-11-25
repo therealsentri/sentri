@@ -233,6 +233,7 @@ const app = buildApp({
   },
   startLimiter: new FixedWindowLimiter(10, 3_600_000, clock),
   ring: async (uid) => push.sendToUser(uid, { kind: 'sos', text: 'Find my phone — your Sentri alarm is ringing.' }),
+  ringLimiter: new FixedWindowLimiter(3, 60_000, clock),
   ackLimiter: new FixedWindowLimiter(60, 60_000, clock),
   logger: false,
   trustProxyHops: env.TRUST_PROXY_HOPS,
@@ -242,8 +243,9 @@ const app = buildApp({
 
 // v51: checkout + signed webhooks for Paystack (NGN) and Creem (USD). The
 // entitlement is stored on the user server-side; the app never decides it.
+const billingStore = pool ? new PgBillingStore(pool) : new MemoryBillingStore();
 registerBillingRoutes(app, {
-  store: pool ? new PgBillingStore(pool) : new MemoryBillingStore(),
+  store: billingStore,
   authenticate: async (req) => auth.userId(req),
   log,
 });

@@ -270,6 +270,21 @@ describe('admin HTTP API', () => {
     expect((await app.inject({ method: 'POST', url: `/admin/v1/requests/${id}/execute`, headers: ha })).statusCode).toBe(409);
   });
 
+  it('serves the overview stats only to a signed-in admin', async () => {
+    const t = rig();
+    const p = await t.svc.provision('stats@x.ng', 'boot');
+    const app = Fastify();
+    registerAdminRoutes(app, { admin: t.svc, loginLimiter: new FixedWindowLimiter(50, 60_000) });
+    expect((await app.inject({ url: '/admin/v1/stats' })).statusCode).toBe(401);
+    t.tick(30_000);
+    const login = await app.inject({ method: 'POST', url: '/admin/v1/login', payload: { email: p.email, password: p.password, code: totpAt(p.totpSecret, stepOf(t.clock())) } });
+    expect(login.statusCode).toBe(200);
+    const r = await app.inject({ url: '/admin/v1/stats', headers: { authorization: `Bearer ${login.json().token}` } });
+    expect(r.statusCode).toBe(200);
+    expect(r.json().stats.users.total).toBe(0);
+    expect(r.json().stats.sos.last24h).toBe(0);
+  });
+
   it('rate limits logins', async () => {
     const t = rig();
     const app = Fastify();

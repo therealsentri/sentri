@@ -28,6 +28,10 @@ label{display:block;font-size:13px;color:var(--mute);margin:10px 0 4px}
 .msg{padding:10px 12px;border-radius:8px;margin-bottom:12px;border:1px solid var(--line)}.msg.err{border-color:var(--bad);color:var(--bad)}.msg.good{border-color:var(--ok);color:var(--ok)}
 .secret{border:2px dashed var(--warn);padding:10px;border-radius:8px;margin-top:8px}
 .tablewrap{overflow-x:auto}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-align:top;font-size:14px}th{color:var(--mute);font-weight:600}
+.statgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.stat{background:linear-gradient(135deg,#0e08a3,#4334d6);color:#fff;border-radius:16px;padding:16px;box-shadow:0 6px 18px rgba(14,8,163,.18)}
+.stat .n{font-size:30px;font-weight:700;line-height:1.1}.stat .l{font-size:13px;opacity:.85;margin-top:5px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px}
 dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 12px;margin:8px 0}dt{color:var(--mute)}dd{margin:0;word-break:break-word}
 .login{max-width:380px;margin:12vh auto 0}
 @media(max-width:560px){main{padding:12px}}
@@ -36,7 +40,7 @@ dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 12px;margin:8px 0}
 const JS = String.raw`
 (function(){
 'use strict';
-var S={token:null,me:null,admins:[],areas:[],rooms:[],tab:'requests',msg:null,secret:null,until:0};
+var S={token:null,me:null,admins:[],areas:[],rooms:[],tab:'overview',msg:null,secret:null,until:0};
 var root=document.getElementById('app'),timer=null;
 
 function el(tag,attrs){
@@ -100,12 +104,40 @@ function reload(){return Promise.all([api('GET','/admins'),api('GET','/directory
 
 /* ---------- shell ---------- */
 function shell(body){
-  var tabs=[['requests','Requests'],['directory','Police directory'],['new','New request'],['team','Team']];
+  var tabs=[['overview','Overview'],['requests','Requests'],['directory','Police directory'],['new','New request'],['team','Team']];
   return el('div',null,
     el('header',null,el('h1',null,'Sentri admin'),
       el('nav',null,tabs.map(function(t){return el('button',{class:S.tab===t[0]?'on':'',onclick:function(){S.tab=t[0];S.msg=null;S.detail=null;S.form=null;render();}},t[1]);})),
       el('div',{class:'row small mute'},S.me.email,' · session ',el('b',{id:'clock'},''),el('button',{onclick:function(){logout();}},'Sign out'))),
     el('main',null,S.msg&&el('div',{class:'msg '+(S.msg.t==='err'?'err':'good')},S.msg.x),body));
+}
+
+/* ---------- overview ---------- */
+function money(minor,cur){
+  var n=(Number(minor)||0)/100;
+  if(cur==='NGN')return '₦'+n.toLocaleString(undefined,{maximumFractionDigits:2});
+  if(cur==='USD')return '$'+n.toLocaleString(undefined,{maximumFractionDigits:2});
+  return cur+' '+n.toLocaleString();
+}
+function tile(n,l){return el('div',{class:'stat'},el('div',{class:'n'},String(n)),el('div',{class:'l'},l));}
+function statsView(){
+  var box=el('div',null,el('div',{class:'card muted'},'Loading overview…'));
+  api('GET','/stats').then(function(r){
+    var s=r.stats,u=s.users||{};
+    var planRows=s.plans&&s.plans.length?s.plans.map(function(p){return el('div',{class:'row sp small'},el('span',null,p.plan),el('b',null,p.count));}):[el('div',{class:'small mute'},'No users yet.')];
+    var revRows=s.billing.revenue&&s.billing.revenue.length?s.billing.revenue.map(function(x){return el('div',{class:'row sp small'},el('span',null,x.currency),el('b',null,money(x.amountMinor,x.currency)));}):[el('div',{class:'small mute'},'No payments in the last 30 days.')];
+    var sold=s.billing.byPlan&&s.billing.byPlan.length?s.billing.byPlan.map(function(p){return el('div',{class:'row sp small'},el('span',null,p.plan),el('b',null,p.count));}):[el('div',{class:'small mute'},'None.')];
+    box.replaceChildren(
+      el('div',{class:'statgrid'},
+        tile(u.total,'Total users'),tile(u.new7d,'New this week'),tile(u.trialActive,'On free trial'),tile(u.premiumActive,'Paid subscribers')),
+      el('div',{class:'mt12'},
+        el('div',{class:'panel'},el('h2',null,'Safety activity'),el('div',{class:'statgrid'},tile(s.sos.last24h,'SOS alerts · 24h'),tile(s.sos.active,'Live right now'))),
+        el('div',{class:'panel'},el('h2',null,'Users by plan'),planRows),
+        el('div',{class:'panel'},el('h2',null,'Payments · last 30 days'),
+          el('div',{class:'row sp small mb10'},el('span',{class:'mute'},s.billing.events30d+' successful payments'),el('span',{class:'mute'},'Updated '+fmt(s.generatedAt))),
+          revRows,el('h2',{class:'mt14'},'Sold by plan'),sold)));
+  }).catch(fail);
+  return el('div',null,box);
 }
 
 /* ---------- requests ---------- */
@@ -245,7 +277,7 @@ function teamView(){
 function render(){
   var body;
   if(!S.token)body=loginView();
-  else body=shell(S.tab==='requests'?requestsView():S.tab==='directory'?directoryView():S.tab==='new'?newView():teamView());
+  else body=shell(S.tab==='overview'?statsView():S.tab==='requests'?requestsView():S.tab==='directory'?directoryView():S.tab==='new'?newView():teamView());
   root.replaceChildren(body);
   if(S.token){var c=document.getElementById('clock'),left=S.until-Date.now();if(c)c.textContent=Math.max(0,Math.floor(left/60000))+':'+('0'+Math.max(0,Math.floor(left/1000)%60)).slice(-2);}
 }

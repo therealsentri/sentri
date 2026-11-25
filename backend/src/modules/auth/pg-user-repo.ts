@@ -228,6 +228,20 @@ export class PgUserRepo implements UserRepo, OtpStore {
       : null;
   }
 
+  async allValid(phoneHmac: Buffer, now: number, maxAttempts: number): Promise<OtpRecord[]> {
+    const r = await this.pool.query(
+      'SELECT id, code_hash, attempts, expires_at, consumed_at FROM otp_challenges WHERE phone_hmac = $1 AND expires_at > $2 AND consumed_at IS NULL AND attempts < $3 ORDER BY created_at DESC',
+      [phoneHmac, now, maxAttempts],
+    );
+    return r.rows.map((row) => ({
+      id: row.id,
+      codeHash: row.code_hash,
+      attempts: row.attempts,
+      expiresAt: Number(row.expires_at),
+      consumedAt: row.consumed_at == null ? undefined : Number(row.consumed_at),
+    }));
+  }
+
   async bumpAttempts(id: string): Promise<number> {
     const r = await this.pool.query('UPDATE otp_challenges SET attempts = attempts + 1 WHERE id = $1 RETURNING attempts', [id]);
     return r.rows[0] ? Number(r.rows[0].attempts) : Infinity;
