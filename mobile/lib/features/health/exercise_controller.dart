@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
@@ -124,12 +125,37 @@ class ExerciseController extends ChangeNotifier {
   LatLng? _lastAccepted; // last fix trusted for the distance count
   DateTime? _lastAcceptedAt;
   double? _lastAcceptedAcc;
+  DateTime? _lastPointAt;
   final _dist = const Distance();
+
+  /// A line through raw GPS points zig-zags across streets when the signal
+  /// bounces off buildings. This light weighted average keeps the real shape of
+  /// the walk while removing the electric-looking corners. Distance is still
+  /// measured from the trusted raw points, so the kilometres stay honest.
+  static List<LatLng> smoothedPath(List<LatLng> pts) {
+    if (pts.length < 3) return List<LatLng>.unmodifiable(pts);
+    final out = <LatLng>[pts.first];
+    for (var i = 1; i < pts.length - 1; i++) {
+      final a = pts[i - 1], b = pts[i], c = pts[i + 1];
+      out.add(LatLng(
+        (a.latitude + 2 * b.latitude + c.latitude) / 4,
+        (a.longitude + 2 * b.longitude + c.longitude) / 4,
+      ));
+    }
+    out.add(pts.last);
+    return List<LatLng>.unmodifiable(out);
+  }
 
   /// A fix worse than this is a tower/Wi-Fi guess or heavy drift: it moves the
   /// camera dot on the map but is never trusted for the distance count. The
   /// movement noise check below keeps the honest sum even in between.
-  static const _maxAccuracyM = 60.0;
+  /// A walk in a city needs tight fixes: a 60 m tower guess draws a line across
+  /// streets the person never walked. Keep only fixes the phone is fairly sure of.
+  double get _maxAccuracyM => switch (mode) {
+        ExerciseMode.walk => 35.0,
+        ExerciseMode.run => 45.0,
+        ExerciseMode.bike => 60.0,
+      };
 
   /// How fast each mode can plausibly move, metres per second, plus a few
   /// metres of slack: a walk cannot outrun 2.5 m/s, a run fits in 7, a bike
@@ -186,6 +212,7 @@ class ExerciseController extends ChangeNotifier {
     _lastAccepted = null;
     _lastAcceptedAt = null;
     _lastAcceptedAcc = null;
+    _lastPointAt = null;
     notifyListeners();
     _listenSteps(m);
     _clockTimer?.cancel();
@@ -328,17 +355,33 @@ class ExerciseController extends ChangeNotifier {
     _lastAcceptedAcc = acc;
     if (movedM >= noiseM && movedM >= 0.5) {
       km += movedM / 1000;
-      _appendPoint(here);
+      _appendPoint(here, f.at);
     }
     notifyListeners();
   }
 
-  /// Joins a point onto the route line, but only when the person really moved
-  /// (over ~8 m) - standing still would pile dots on one house.
-  void _appendPoint(LatLng pt) {
+  /// Joins a point onto the route line only for real movement. Two GPS errors
+  /// either side of the true spot can look like a fast zig-zag across a road;
+  /// a short reversal back towards where we just were is dropped, and points
+  /// are never added faster than a person can walk.
+  void _appendPoint(LatLng pt, DateTime at) {
     final list = [...path];
-    if (list.isNotEmpty && _dist.as(LengthUnit.Meter, list.last, pt) < 8) return;
+    if (list.isNotEmpty && _dist.as(LengthUnit.Meter, list.last, pt) < 10) return;
+    if (_lastPointAt != null && at.difference(_lastPointAt!).inMilliseconds < 2500) return;
+    // Reversal / oscillation check: jumping back to a point we passed moments
+    // ago is multipath noise, not a change of direction.
+    if (list.length >= 2) {
+      final back = list[list.length - 2];
+      if (_dist.as(LengthUnit.Meter, back, pt) < 22) return;
+      final prev = list.last;
+      final b1 = math.atan2(prev.longitude - back.longitude, prev.latitude - back.latitude);
+      final b2 = math.atan2(pt.longitude - prev.longitude, pt.latitude - prev.latitude);
+      var turn = (b2 - b1).abs();
+      if (turn > math.pi) turn = 2 * math.pi - turn;
+      if (turn > 2.1) return; // sharper than 120 degrees: a GPS bounce
+    }
     list.add(pt);
+    _lastPointAt = at;
     if (list.length > _maxPathPoints) {
       // Thin the line to half its points but always keep the very start and end.
       final halved = <LatLng>[];

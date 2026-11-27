@@ -181,7 +181,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                         ),
                       ]),
                     if (path.length >= 2)
-                      PolylineLayer(polylines: [Polyline(points: path, strokeWidth: 5, color: const Color(0xFF6A5FF0))]),
+                      PolylineLayer(polylines: [Polyline(points: ExerciseController.smoothedPath(path), strokeWidth: 5, color: const Color(0xFF6A5FF0))]),
                     if (here != null)
                       MarkerLayer(markers: [
                         Marker(

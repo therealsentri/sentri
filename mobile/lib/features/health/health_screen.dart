@@ -905,8 +905,8 @@ class FlutterMapSheetMap extends StatelessWidget {
         for (final url in sentriBaseLayers(mapType).urls) TileLayer(urlTemplate: url, userAgentPackageName: 'ng.sentri.sentri'),
         PolylineLayer(polylines: [
           // A pale casing under the line, same look as the map's live routes.
-          Polyline(points: path, strokeWidth: 7, color: const Color(0x336A5FF0)),
-          Polyline(points: path, strokeWidth: 4, color: const Color(0xFF6A5FF0)),
+          Polyline(points: ExerciseController.smoothedPath(path), strokeWidth: 7, color: const Color(0x336A5FF0)),
+          Polyline(points: ExerciseController.smoothedPath(path), strokeWidth: 4, color: const Color(0xFF6A5FF0)),
         ]),
         if (ends)
           MarkerLayer(markers: [
