@@ -116,11 +116,18 @@ void main() {
   group('a session the server has forgotten', () {
     Future<http.Response> forgets(http.Request req, int n) async => http.Response('{"error":"unauthorized"}', 401, headers: _json);
 
-    test('signs the person out, once, so sign-in can start again', () async {
+    test('signs the person out only after a second, separate confirmation', () async {
       final session = _signedIn();
       var expired = 0;
       final api = _api(_Server(forgets), session: session, onExpired: () => expired++);
-      await expectLater(api.decideInvite('c1', accept: true), throwsA(isA<ApiHttpError>().having((e) => e.status, 'status', 401)));
+      // One refusal must never log anyone out: a sleeping server can answer 401.
+      await expectLater(api.decideInvite('c1', accept: true), throwsA(isA<ApiUnreachable>()));
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      expect(expired, 0);
+      expect(session.signedIn, isTrue);
+      // A second confirmation, a moment later, is a genuinely forgotten session.
+      await Future<void>.delayed(const Duration(milliseconds: 1100));
+      await expectLater(api.decideInvite('c2', accept: true), throwsA(isA<ApiUnreachable>()));
       await Future<void>.delayed(const Duration(milliseconds: 30));
       expect(expired, 1);
       expect(session.signedIn, isFalse);

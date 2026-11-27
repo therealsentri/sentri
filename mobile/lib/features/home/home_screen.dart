@@ -516,8 +516,12 @@ class _ProfileSheetState extends State<_ProfileSheet> {
               Center(
                 child: GestureDetector(
                   onTap: () async {
-                    final bytes = await pickAvatarImage();
-                    if (bytes != null) await widget.profile.setAvatar(bytes);
+                    try {
+                      final bytes = await pickAvatarImage();
+                      if (bytes != null) await widget.profile.setAvatar(bytes);
+                    } catch (_) {
+                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not change the photo.')));
+                    }
                   },
                   child: SizedBox(
                     width: 74,

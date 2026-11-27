@@ -149,7 +149,7 @@ class _UpgradeScreenState extends State<UpgradeScreen> with WidgetsBindingObserv
               ButtonSegment(value: 'creem', label: Text('International · Card')),
             ],
             selected: {_rail},
-            onSelectionChanged: (v) => setState(() => _rail = v.first),
+            onSelectionChanged: (v) { if (v.isNotEmpty) setState(() => _rail = v.first); },
           ),
           const SizedBox(height: 16),
           for (final p in _plans)

@@ -96,6 +96,8 @@ class AppServices {
   /// The police directory, loaded once; the SOS screen and alert screens use it to show who to call.
   final Future<PoliceDirectory> police = rootBundle.loadString('assets/directory/police_directory.json').then(PoliceDirectory.parse).catchError((_) => PoliceDirectory(const []));
   StreamSubscription<List<ConnectivityResult>>? _net;
+  void Function()? _settingsListener;
+  bool _wasOnboarded = false;
   late final PushService _push = PushService(api, onAlert: () => unawaited(inbox.refresh()));
 
   static Future<AppServices> create() async {
@@ -248,18 +250,23 @@ class AppServices {
       unawaited(inbox.refresh());
       unawaited(share.resume());
     }
-    settings.addListener(() {
-      if (settings.onboarded) {
+    _wasOnboarded = settings.onboarded;
+    _settingsListener = () {
+      // Only a real false -> true transition (finishing sign-in) starts the
+      // background workers. Any other settings edit must not restart them.
+      if (settings.onboarded && !_wasOnboarded) {
         lowBattery.start();
         health.start();
         unawaited(_push.start());
       }
-    });
-
+      _wasOnboarded = settings.onboarded;
+    };
+    settings.addListener(_settingsListener!);
   }
 
   Future<void> dispose() async {
     await _net?.cancel();
+    if (_settingsListener != null) settings.removeListener(_settingsListener!);
     lowBattery.stop();
     health.dispose();
     exercise.dispose();

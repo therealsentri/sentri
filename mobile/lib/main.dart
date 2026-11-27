@@ -25,8 +25,9 @@ Future<void> _boot(ValueNotifier<Widget> holder) async {
   try {
     await BrandPoppins.ensure().catchError((_) {});
     final services = await AppServices.create();
-    PremiumState.bind(services.api, store: services.store);
-    // Never block the first frame on billing; refresh in the background.
+    // Restore the cached entitlement first, then check the server in the
+    // background. Awaiting the cache prevents it overwriting a fresh answer.
+    await PremiumState.bind(services.api, store: services.store);
     unawaited(PremiumState.refresh());
     holder.value = SentriApp(services: services);
   } catch (e, st) {

@@ -208,8 +208,10 @@ Future<void> showLanguageSheet(BuildContext context, I18n i18n, Future<void> Fun
                 code: l.code.toUpperCase(),
                 selected: l.code == i18n.code,
                 onTap: () async {
-                  Navigator.pop(ctx);
-                  await onPick(l.code);
+                  if (Navigator.of(ctx).canPop()) Navigator.of(ctx).pop();
+                  try {
+                    await onPick(l.code);
+                  } catch (_) {}
                 },
               ),
             ),

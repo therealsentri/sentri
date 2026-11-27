@@ -19,6 +19,12 @@ class ApiUnreachable implements Exception {
   String toString() => 'ApiUnreachable($cause)';
 }
 
+/// The session could not be confirmed, but there is not enough evidence to sign out.
+/// Never retried or surfaced as an auth failure: protection stays on.
+class _SessionUncertain implements Exception {
+  const _SessionUncertain();
+}
+
 /// The server answered with an error status.
 class ApiHttpError implements Exception {
   ApiHttpError(this.status, this.code);
@@ -225,7 +231,9 @@ class Session {
   Future<void> load() async {
     final raw = await _store.read(_k);
     if (raw == null) return;
-    final j = jsonDecode(raw) as Map<String, dynamic>;
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map<String, dynamic>) return;
+    final j = decoded;
     accessToken = j['a'] as String?;
     refreshToken = j['r'] as String?;
     deviceId = j['d'] as String?;
@@ -281,22 +289,35 @@ class HttpSentriApi implements SentriApi {
   void Function()? onSessionExpired;
 
   /// A single 401 from a sleeping/restarting server must never sign the person out.
-  /// Protection stays on until the refusal is confirmed twice in a short window.
+  /// The refresh is deduplicated, so exactly one definitive refusal is counted per
+  /// refresh cycle, and two confirmations must be at least 30 seconds apart.
   int _sessionStrikes = 0;
   DateTime? _firstSessionStrike;
+  DateTime? _lastSessionStrike;
+  bool _sessionLossConfirmed = false;
 
-  void _noteSessionStrike() {
+  bool _noteSessionStrike() {
     final now = DateTime.now();
     if (_firstSessionStrike == null || now.difference(_firstSessionStrike!) > const Duration(minutes: 10)) {
       _firstSessionStrike = now;
-      _sessionStrikes = 0;
+      _lastSessionStrike = now;
+      _sessionStrikes = 1;
+      _sessionLossConfirmed = false;
+      return false;
     }
+    // Several requests that all rode the same deduplicated refresh are one refusal.
+    if (_lastSessionStrike != null && now.difference(_lastSessionStrike!) < const Duration(seconds: 1)) return false;
+    _lastSessionStrike = now;
     _sessionStrikes++;
+    _sessionLossConfirmed = _sessionStrikes >= 2;
+    return _sessionLossConfirmed;
   }
 
   void _clearSessionStrikes() {
     _sessionStrikes = 0;
     _firstSessionStrike = null;
+    _lastSessionStrike = null;
+    _sessionLossConfirmed = false;
   }
 
   /// True while the app is waiting for a sleeping server to wake up, so the screen can say so.
@@ -322,6 +343,9 @@ class HttpSentriApi implements SentriApi {
   Future<http.Response> _call(String method, String path, {Object? body, bool auth = true, bool patient = true}) async {
     try {
       return await _attempt(method, path, body, auth, patient);
+    } on _SessionUncertain catch (_) {
+      // Not a network failure and not a 401: callers treat it like "try later".
+      throw ApiUnreachable(StateError('session check inconclusive'));
     } on ApiUnreachable catch (e) {
       // No connection at all (offline, no DNS) is reported at once. Only a slow answer, or the hosting
       // platform's own "not ready" reply, means a sleeping server worth waiting for.
@@ -342,21 +366,23 @@ class HttpSentriApi implements SentriApi {
         final r = await _refresh();
         if (r == _Refreshed.ok) {
           res = await _once(method, path, body, auth, limit);
-        } else if (r == _Refreshed.rejected && patient) {
-          _noteSessionStrike();
-          if (_sessionStrikes >= 2) {
+        } else if (r == _Refreshed.rejected) {
+          // The strike is recorded inside the deduplicated refresh, so all the
+          // calls that rode this one refusal count as a single confirmation.
+          if (_sessionLossConfirmed) {
             unawaited(_expire());
-          } else {
-            // First strike: keep the session and the protection on. Fail this call
-            // like a network problem so nothing logs the person out by mistake.
-            throw ApiUnreachable('session check inconclusive');
+            // Do not report a 401 to the caller: the onboarding callback already
+            // explains the sign-in, and inbox must not also cry "session ended".
+            throw ApiUnreachable(StateError('session ended'));
           }
+          throw const _SessionUncertain();
         } else if (r == _Refreshed.unavailable && patient) {
           throw ApiUnreachable('could not check the session');
         }
       }
       if (patient && const {502, 503, 504}.contains(res.statusCode)) throw ApiUnreachable('server answered ${res.statusCode}');
       if (res.statusCode >= 400) throw ApiHttpError(res.statusCode, _errorCode(res));
+      if (auth) _clearSessionStrikes();
       return res;
     } on TimeoutException catch (e) {
       throw ApiUnreachable(e);
@@ -372,8 +398,14 @@ class HttpSentriApi implements SentriApi {
   /// The server said it does not know this session: forget it and let the app start sign-in again.
   Future<void> _expire() async {
     if (!session.signedIn) return;
-    await session.clear();
-    onSessionExpired?.call();
+    try {
+      await session.clear();
+    } catch (_) {
+      // Storage can fail; the in-memory session is still cleared below.
+    } finally {
+      _clearSessionStrikes();
+      onSessionExpired?.call();
+    }
   }
 
   /// A server that has been idle spins down and can take minutes to start again. Checks on it until it answers
@@ -424,7 +456,15 @@ class HttpSentriApi implements SentriApi {
     }
   }
 
-  Map<String, dynamic> _json(http.Response r) => r.body.isEmpty ? {} : jsonDecode(r.body) as Map<String, dynamic>;
+  Map<String, dynamic> _json(http.Response r) {
+    if (r.body.isEmpty) return {};
+    try {
+      final v = jsonDecode(r.body);
+      return v is Map<String, dynamic> ? v : {};
+    } catch (_) {
+      return {};
+    }
+  }
 
   /// Swaps the refresh token for a new pair. One refresh at a time.
   Future<_Refreshed>? _refreshing;
@@ -442,7 +482,11 @@ class HttpSentriApi implements SentriApi {
         _clearSessionStrikes();
         return _Refreshed.ok;
       }
-      return const {400, 401, 403, 404}.contains(res.statusCode) ? _Refreshed.rejected : _Refreshed.unavailable;
+      if (const {400, 401, 403, 404}.contains(res.statusCode)) {
+        _noteSessionStrike();
+        return _Refreshed.rejected;
+      }
+      return _Refreshed.unavailable;
     } on TimeoutException {
       return _Refreshed.unavailable;
     } on SocketException {
@@ -537,7 +581,7 @@ class HttpSentriApi implements SentriApi {
 
   @override
   Future<List<ContactStatus>> listContacts() async {
-    final res = await _call('GET', '/v1/me/contacts');
+    final res = await _call('GET', '/v1/me/contacts', patient: false);
     final list = ContactStatus.listFromJson(_json(res)['contacts']);
     // v45: remember this answer on the phone, so the next open of the contacts
     // screen starts from it instantly and reconciles quietly. A cache write
@@ -622,12 +666,12 @@ class HttpSentriApi implements SentriApi {
 
   @override
   Future<void> decideInvite(String contactId, {required bool accept}) async {
-    await _call('POST', '/v1/invites/${Uri.encodeComponent(contactId)}', body: {'decision': accept ? 'accept' : 'decline'});
+    await _call('POST', '/v1/invites/${Uri.encodeComponent(contactId)}', body: {'decision': accept ? 'accept' : 'decline'}, patient: false);
   }
 
   @override
   Future<TestAlertResult> sendTestAlert() async {
-    final j = _json(await _call('POST', '/v1/test-alert'));
+    final j = _json(await _call('POST', '/v1/test-alert', patient: false));
     int n(String k) => j[k] is num ? (j[k] as num).toInt() : 0;
     return TestAlertResult(sent: n('sent'), reachable: n('reachable'), total: n('total'));
   }
@@ -686,13 +730,14 @@ class HttpSentriApi implements SentriApi {
 
   @override
   Future<String> billingCheckout(String rail, String plan) async {
-    final j = _json(await _call('POST', '/v1/billing/checkout', body: {'rail': rail, 'plan': plan}));
+    // A tap opens a browser: fail fast rather than spinning while a server wakes.
+    final j = _json(await _call('POST', '/v1/billing/checkout', body: {'rail': rail, 'plan': plan}, patient: false));
     return j['url'] as String? ?? '';
   }
 
   @override
   Future<bool> ringMyPhone() async {
-    final j = _json(await _call('POST', '/v1/me/ring'));
+    final j = _json(await _call('POST', '/v1/me/ring', patient: false));
     return j['ok'] is bool ? j['ok'] as bool : false;
   }
 }

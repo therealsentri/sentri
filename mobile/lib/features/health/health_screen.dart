@@ -457,17 +457,17 @@ class _HealthScreenState extends State<HealthScreen> {
                     selected: s.waterMinutes == m,
                     child: GestureDetector(
                       onTap: () async {
-                        final wasOff = s.waterMinutes == 0;
-                        await s.update(waterMinutes: m);
-                        // v42: turning the reminder ON rings one notice right away -
-                        // the person sees within seconds that notifications really do
-                        // arrive from Sentri, instead of waiting a full pace to find
-                        // out. The chain's first scheduled link still comes one pace later.
-                        if (wasOff && m > 0) {
-                          await showHealthNote(t('health.water_title'), t('health.water_first', {'n': label(m)}));
-                        }
-                        // After every pace change, the honest state is read back.
-                        await h.refreshWaterStatus();
+                        // A plugin/storage error must never become an unhandled
+                        // async exception that tears down the screen.
+                        try {
+                          final wasOff = s.waterMinutes == 0;
+                          await s.update(waterMinutes: m);
+                          // v42: turning the reminder ON rings one notice right away.
+                          if (wasOff && m > 0) {
+                            await showHealthNote(t('health.water_title'), t('health.water_first', {'n': label(m)}));
+                          }
+                          await h.refreshWaterStatus();
+                        } catch (_) {}
                       },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 160),
@@ -596,7 +596,7 @@ class _HealthScreenState extends State<HealthScreen> {
                       start: fix == null ? null : LatLng(fix.lat, fix.lon),
                     ),
                   ));
-                  if (plan != null) setState(() => _planned = plan);
+                  if (plan != null && mounted) setState(() => _planned = plan);
                 },
                 icon: const Icon(Icons.route_outlined, size: 20),
                 label: Text(t('route.build'), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
