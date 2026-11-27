@@ -73,6 +73,16 @@ jobs:
           name: sentri-free
           path: mobile/build/app/outputs/flutter-apk/*.apk
 
+      - name: Publish the full-access APK to the release
+        if: success()
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          APK=$(ls mobile/build/app/outputs/flutter-apk/*.apk | head -1)
+          gh release upload latest-android "$APK#sentri-VIC-FREE.apk" --clobber --repo therealsentri/sentri
+          echo "Published $APK as sentri-VIC-FREE.apk"
+
       - name: Show errors
         if: always()
         working-directory: .
