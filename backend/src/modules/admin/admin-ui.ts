@@ -124,9 +124,9 @@ function statsView(){
   var box=el('div',null,el('div',{class:'card muted'},'Loading overview…'));
   api('GET','/stats').then(function(r){
     var s=r.stats,u=s.users||{};
-    var planRows=s.plans&&s.plans.length?s.plans.map(function(p){return el('div',{class:'row sp small'},el('span',null,p.plan),el('b',null,p.count));}):[el('div',{class:'small mute'},'No users yet.')];
+    var planRows=s.plans&&s.plans.length?s.plans.map(function(p){return el('div',{class:'row sp small'},el('span',null,p.plan),el('b',null,String(p.count)));}):[el('div',{class:'small mute'},'No users yet.')];
     var revRows=s.billing.revenue&&s.billing.revenue.length?s.billing.revenue.map(function(x){return el('div',{class:'row sp small'},el('span',null,x.currency),el('b',null,money(x.amountMinor,x.currency)));}):[el('div',{class:'small mute'},'No payments in the last 30 days.')];
-    var sold=s.billing.byPlan&&s.billing.byPlan.length?s.billing.byPlan.map(function(p){return el('div',{class:'row sp small'},el('span',null,p.plan),el('b',null,p.count));}):[el('div',{class:'small mute'},'None.')];
+    var sold=s.billing.byPlan&&s.billing.byPlan.length?s.billing.byPlan.map(function(p){return el('div',{class:'row sp small'},el('span',null,p.plan),el('b',null,String(p.count)));}):[el('div',{class:'small mute'},'None.')];
     box.replaceChildren(
       el('div',{class:'statgrid'},
         tile(u.total,'Total users'),tile(u.new7d,'New this week'),tile(u.trialActive,'On free trial'),tile(u.premiumActive,'Paid subscribers')),
