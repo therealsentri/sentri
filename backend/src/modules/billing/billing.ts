@@ -113,6 +113,13 @@ export function registerBillingRoutes(app: FastifyInstance, deps: Deps): Fastify
       try { done(null, JSON.parse((body as Buffer).toString('utf8'))); } catch (e) { done(e as Error, undefined); }
     });
 
+    // Public readiness probe. No secrets are exposed: the app uses this to say
+    // plainly which payment option is available instead of a generic error.
+    child.get('/v1/billing/config', async () => ({
+      paystack: !!process.env.PAYSTACK_SECRET_KEY,
+      creem: !!process.env.CREEM_API_KEY,
+    }));
+
     child.get('/v1/billing/plans', async () => ({
       naira: [
         { id: 'monthly', amount: 120000, currency: 'NGN', label: 'Premium monthly' },
@@ -138,7 +145,7 @@ export function registerBillingRoutes(app: FastifyInstance, deps: Deps): Fastify
       const plan = rail === 'creem' ? 'monthly' : (b.plan && b.plan in PAYSTACK_PLANS ? b.plan as keyof typeof PAYSTACK_PLANS : 'monthly');
       if (rail === 'paystack') {
         const secret = process.env.PAYSTACK_SECRET_KEY;
-        if (!secret) return reply.code(503).send({ error: 'payments_not_configured' });
+        if (!secret) return reply.code(503).send({ error: 'payments_not_configured', rail: 'paystack' });
         const res = await fetchFn('https://api.paystack.co/transaction/initialize', {
           method: 'POST',
           headers: { authorization: `Bearer ${secret}`, 'content-type': 'application/json' },
@@ -151,12 +158,13 @@ export function registerBillingRoutes(app: FastifyInstance, deps: Deps): Fastify
           }),
           signal: AbortSignal.timeout(8000),
         });
-        if (!res.ok) return reply.code(502).send({ error: 'checkout_failed' });
+        if (!res.ok) return reply.code(502).send({ error: 'checkout_failed', rail: 'paystack' });
         const j = await res.json() as { data?: { authorization_url?: string; reference?: string } };
-        return { url: j.data?.authorization_url, reference: j.data?.reference, rail, plan };
+        if (!j.data?.authorization_url) return reply.code(502).send({ error: 'checkout_failed', rail: 'paystack' });
+        return { url: j.data.authorization_url, reference: j.data.reference, rail, plan };
       }
       const key = process.env.CREEM_API_KEY;
-      if (!key) return reply.code(503).send({ error: 'payments_not_configured' });
+      if (!key) return reply.code(503).send({ error: 'payments_not_configured', rail: 'creem' });
       const res = await fetchFn('https://api.creem.io/v1/checkouts', {
         method: 'POST',
         headers: { 'x-api-key': key, 'content-type': 'application/json' },
@@ -168,9 +176,11 @@ export function registerBillingRoutes(app: FastifyInstance, deps: Deps): Fastify
         }),
         signal: AbortSignal.timeout(8000),
       });
-      if (!res.ok) return reply.code(502).send({ error: 'checkout_failed' });
+      if (!res.ok) return reply.code(502).send({ error: 'checkout_failed', rail: 'creem' });
       const j = await res.json() as { checkout_url?: string; url?: string };
-      return { url: j.checkout_url ?? j.url, rail, plan };
+      const url = j.checkout_url ?? j.url;
+      if (!url) return reply.code(502).send({ error: 'checkout_failed', rail: 'creem' });
+      return { url, rail, plan };
     });
 
     child.get('/v1/billing/callback', async (req, reply) => {

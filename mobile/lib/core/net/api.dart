@@ -207,6 +207,8 @@ abstract class SentriApi {
 
   // v51: purchases. Defaults keep existing test doubles working.
   Future<Map<String, dynamic>> billingStatus() async => {'plan': 'free', 'expiresAt': null};
+  /// Which payment rails the server has keys for. No secrets are returned.
+  Future<Map<String, dynamic>> billingConfig() async => {'paystack': true, 'creem': true};
   Future<String> billingCheckout(String rail, String plan) async => throw UnimplementedError();
   Future<bool> ringMyPhone() async => false;
 }
@@ -727,6 +729,9 @@ class HttpSentriApi implements SentriApi {
   @override
   /// Entitlement check must never hold the UI hostage while a sleeping server wakes.
   Future<Map<String, dynamic>> billingStatus() async => _json(await _call('GET', '/v1/billing/status', patient: false));
+
+  @override
+  Future<Map<String, dynamic>> billingConfig() async => _json(await _call('GET', '/v1/billing/config', patient: false));
 
   @override
   Future<String> billingCheckout(String rail, String plan) async {

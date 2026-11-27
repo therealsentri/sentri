@@ -184,6 +184,9 @@ p { color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; } .ticker-track, .flag-track { animation: none; } }
 
 /* GLOBAL REACH */
+.global-photo { margin: 0 0 1.6rem; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; max-width: 760px; background: var(--panel); }
+.global-photo img { display: block; width: 100%; height: 250px; object-fit: cover; object-position: center 35%; }
+.global-photo figcaption { padding: 10px 14px; font-size: .78rem; color: var(--muted); }
 .global-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 260px)); gap: 12px; margin-bottom: 1.6rem; }
 .global-stats > div { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 1.1rem 1.3rem; }
 .global-stats strong { display: block; font-weight: 400; font-size: 2.8rem; line-height: 1; letter-spacing: -.05em; color: var(--mint); }

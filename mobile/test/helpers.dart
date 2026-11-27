@@ -69,6 +69,8 @@ class FakeApi implements SentriApi {
         'trialEndsAt': DateTime.now().add(const Duration(days: 14)).toIso8601String(),
       };
   @override
+  Future<Map<String, dynamic>> billingConfig() async => {'paystack': true, 'creem': true};
+  @override
   Future<String> billingCheckout(String rail, String plan) async => 'https://example.com/pay';
   @override
   Future<bool> ringMyPhone() async => false;

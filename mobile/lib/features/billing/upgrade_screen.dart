@@ -21,12 +21,18 @@ class _UpgradeScreenState extends State<UpgradeScreen> with WidgetsBindingObserv
   String? _current;
   String? _error;
   bool _busy = false;
+  Map<String, dynamic>? _config;
+
+  bool get _railReady => _config?[_rail] != false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     PremiumState.refresh();
+    widget.api.billingConfig().then((c) {
+      if (mounted) setState(() => _config = c);
+    }).catchError((_) {});
     widget.api.billingStatus().then((s) {
       if (mounted) setState(() => _current = s['plan'] as String? ?? 'free');
     }).catchError((_) {});
@@ -55,6 +61,10 @@ class _UpgradeScreenState extends State<UpgradeScreen> with WidgetsBindingObserv
   ];
 
   Future<void> _pay() async {
+    if (!_railReady) {
+      setState(() => _error = 'This payment option is not available yet. Try the other one, or email therealsentri@gmail.com.');
+      return;
+    }
     setState(() { _busy = true; _error = null; });
     try {
       final url = await widget.api.billingCheckout(_rail, _plan);
@@ -62,8 +72,18 @@ class _UpgradeScreenState extends State<UpgradeScreen> with WidgetsBindingObserv
       final uri = Uri.parse(url);
       final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
       if (!ok && mounted) setState(() => _error = 'Could not open the payment page.');
-    } catch (e) {
-      if (mounted) setState(() => _error = 'Payment page unavailable. Check your connection and try again.');
+    } on ApiHttpError catch (e) {
+      if (!mounted) return;
+      setState(() => _error = switch (e.code) {
+        'payments_not_configured' => 'Payments are being set up. Try again shortly, or email therealsentri@gmail.com.',
+        'checkout_failed' => 'The payment provider did not respond. Try the other option, or email therealsentri@gmail.com.',
+        'rate_limited' => 'Too many attempts. Wait a moment and try again.',
+        _ => 'Payment could not start (${e.status}). Email therealsentri@gmail.com if it keeps happening.',
+      });
+    } on ApiUnreachable catch (_) {
+      if (mounted) setState(() => _error = 'No connection right now. Check your data and try again.');
+    } catch (_) {
+      if (mounted) setState(() => _error = 'The payment page could not be opened. Check your browser and try again.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -151,6 +171,14 @@ class _UpgradeScreenState extends State<UpgradeScreen> with WidgetsBindingObserv
             selected: {_rail},
             onSelectionChanged: (v) { if (v.isNotEmpty) setState(() => _rail = v.first); },
           ),
+          if (!_railReady)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                '${_rail == 'paystack' ? 'Paystack' : 'Card'} payments are being set up. Try the other option or email therealsentri@gmail.com.',
+                style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12.5),
+              ),
+            ),
           const SizedBox(height: 16),
           for (final p in _plans)
             Container(

@@ -114,9 +114,10 @@ class _GuardianPainter extends CustomPainter {
   _GuardianPainter(this.badge);
   final GuardianBadge badge;
 
-  static const _maleSkinDark = Color(0xFFB5794A);
-  static const _maleSkinLight = Color(0xFFD9A06D);
-  static const _femaleSkin = Color(0xFFC98E5F);
+  // Black skin tones for the people who show up when an alert goes out.
+  static const _maleSkinDark = Color(0xFF5B3622);
+  static const _maleSkinLight = Color(0xFF8B5A38);
+  static const _femaleSkin = Color(0xFF6D4229);
 
   @override
   void paint(Canvas canvas, Size size) {
