@@ -5,13 +5,13 @@ import type { Pool } from 'pg';
 export interface BillingStatus {
   plan: string;
   expiresAt: string | null;
-  /** v53: true while the 14-day trial is running or a paid plan is active. */
+  /** True while the 7-day trial is running or a paid plan is active. */
   premium: boolean;
   trialEndsAt: string | null;
 }
 
-/** 14 days from the first authenticated check — no client input involved. */
-export const TRIAL_DAYS = 14;
+/** 7 days from the first authenticated check — no client input involved. */
+export const TRIAL_DAYS = 7;
 const PAID = new Set(['monthly', 'yearly', 'family']);
 export function isPremium(s: Pick<BillingStatus, 'plan' | 'expiresAt' | 'trialEndsAt'>, now = Date.now()): boolean {
   if (PAID.has(s.plan) && !!s.expiresAt && new Date(s.expiresAt).getTime() > now) return true;

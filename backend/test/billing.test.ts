@@ -21,7 +21,7 @@ const webhook = (body: unknown, secret: string) => ({
 });
 
 describe('billing routes', () => {
-  it('a paid plan stays premium; trial expires after 14 days', async () => {
+  it('a paid plan stays premium; trial expires after 7 days', async () => {
     const future = new Date(Date.now() + 86_400_000).toISOString();
     const past = new Date(Date.now() - 86_400_000).toISOString();
     expect(isPremium({ plan: 'monthly', expiresAt: future, trialEndsAt: past })).toBe(true);
@@ -40,7 +40,7 @@ describe('billing routes', () => {
 
     const mine = await app.inject({ method: 'GET', url: '/v1/billing/status', headers: { 'x-dev-user': 'u1' } });
     expect(mine.json().plan).toBe('free');
-    expect(mine.json().premium).toBe(true); // 14-day trial is running
+    expect(mine.json().premium).toBe(true); // 7-day trial is running
     expect(mine.json().trialEndsAt).toBeTruthy();
   });
 

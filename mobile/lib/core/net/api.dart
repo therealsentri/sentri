@@ -280,6 +280,25 @@ class HttpSentriApi implements SentriApi {
   /// Called once when the server has said it no longer knows this phone's session (for example after a server reset).
   void Function()? onSessionExpired;
 
+  /// A single 401 from a sleeping/restarting server must never sign the person out.
+  /// Protection stays on until the refusal is confirmed twice in a short window.
+  int _sessionStrikes = 0;
+  DateTime? _firstSessionStrike;
+
+  void _noteSessionStrike() {
+    final now = DateTime.now();
+    if (_firstSessionStrike == null || now.difference(_firstSessionStrike!) > const Duration(minutes: 10)) {
+      _firstSessionStrike = now;
+      _sessionStrikes = 0;
+    }
+    _sessionStrikes++;
+  }
+
+  void _clearSessionStrikes() {
+    _sessionStrikes = 0;
+    _firstSessionStrike = null;
+  }
+
   /// True while the app is waiting for a sleeping server to wake up, so the screen can say so.
   final ValueNotifier<bool> waking = ValueNotifier<bool>(false);
 
@@ -324,7 +343,14 @@ class HttpSentriApi implements SentriApi {
         if (r == _Refreshed.ok) {
           res = await _once(method, path, body, auth, limit);
         } else if (r == _Refreshed.rejected && patient) {
-          unawaited(_expire());
+          _noteSessionStrike();
+          if (_sessionStrikes >= 2) {
+            unawaited(_expire());
+          } else {
+            // First strike: keep the session and the protection on. Fail this call
+            // like a network problem so nothing logs the person out by mistake.
+            throw ApiUnreachable('session check inconclusive');
+          }
         } else if (r == _Refreshed.unavailable && patient) {
           throw ApiUnreachable('could not check the session');
         }
@@ -413,6 +439,7 @@ class HttpSentriApi implements SentriApi {
         session.accessToken = j['accessToken'] as String;
         session.refreshToken = j['refreshToken'] as String;
         await session.save();
+        _clearSessionStrikes();
         return _Refreshed.ok;
       }
       return const {400, 401, 403, 404}.contains(res.statusCode) ? _Refreshed.rejected : _Refreshed.unavailable;
@@ -654,7 +681,8 @@ class HttpSentriApi implements SentriApi {
   }
 
   @override
-  Future<Map<String, dynamic>> billingStatus() async => _json(await _call('GET', '/v1/billing/status'));
+  /// Entitlement check must never hold the UI hostage while a sleeping server wakes.
+  Future<Map<String, dynamic>> billingStatus() async => _json(await _call('GET', '/v1/billing/status', patient: false));
 
   @override
   Future<String> billingCheckout(String rail, String plan) async {

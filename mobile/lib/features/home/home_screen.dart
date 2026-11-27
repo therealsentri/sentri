@@ -40,18 +40,32 @@ import '../sos/sos_controller.dart';
 /// person holds the SOS — or the alert is live — the whole screen leans toward
 /// alarm red and the face smirks, not frowns. The face blinks every two seconds
 /// so it feels alive; the shared painter lives in flat.dart.
-/// Premium sections are open during the 14-day trial; afterwards the upgrade screen replaces them.
+/// Premium sections are open during the 7-day trial; afterwards the upgrade screen replaces them.
+bool _premiumOpening = false;
+
 Future<void> _openPremiumScreen(BuildContext context, SentriApi api, Widget Function() build) async {
-  if (PremiumState.freeBuild) {
-    if (context.mounted) await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => build()));
-    return;
-  }
-  await PremiumState.refresh();
-  if (!context.mounted) return;
-  if (PremiumState.instance.premium) {
-    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => build()));
-  } else {
-    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => UpgradeScreen(api: api)));
+  // Two fast taps must not push the same screen twice (that used to stack routes
+  // and leave the app stuck on a half-built page).
+  if (_premiumOpening) return;
+  _premiumOpening = true;
+  try {
+    if (PremiumState.freeBuild) {
+      if (context.mounted) await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => build()));
+      return;
+    }
+    // Bounded wait: a slow server must never freeze a tap.
+    await PremiumState.refresh().timeout(const Duration(seconds: 9));
+    if (!context.mounted) return;
+    if (PremiumState.instance.premium) {
+      await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => build()));
+    } else {
+      await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => UpgradeScreen(api: api)));
+    }
+  } catch (_) {
+    // Entitlement unknown for a moment: show the upgrade screen rather than hanging.
+    if (context.mounted) await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => UpgradeScreen(api: api)));
+  } finally {
+    _premiumOpening = false;
   }
 }
 
@@ -232,7 +246,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         final p = PremiumState.instance;
                         if (!p.premium || p.plan != 'free' || p.trialEndsAt == null) return const SizedBox.shrink();
                         final end = DateTime.tryParse(p.trialEndsAt!) ?? DateTime.now().add(const Duration(days: 14));
-                        final days = (end.difference(DateTime.now()).inDays + 1).clamp(0, 14);
+                        final days = (end.difference(DateTime.now()).inDays + 1).clamp(0, 7);
                         return Padding(
                           padding: const EdgeInsets.fromLTRB(22, 4, 22, 0),
                           child: Material(
@@ -250,7 +264,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   const Icon(Icons.workspace_premium, color: Colors.white, size: 20),
                                   const SizedBox(width: 10),
                                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                    const Text('14-day free trial', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
+                                    const Text('7-day free trial', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
                                     Text('Full access · $days ${days == 1 ? 'day' : 'days'} left. Keep Premium after the trial.',
                                         style: const TextStyle(color: Colors.white70, fontSize: 11.5)),
                                   ])),
@@ -782,7 +796,7 @@ class _ShortcutsPage extends StatelessWidget {
                         leading: Icon(Icons.workspace_premium_outlined, color: cs.primary),
                         title: Text('Sentri Premium · ${PremiumState.instance.label}'),
                         subtitle: Text(PremiumState.instance.premium && PremiumState.instance.plan == 'free'
-                            ? 'Full access during your 14-day trial.'
+                            ? 'Full access during your 7-day trial.'
                             : 'Travel, health suite, history and more.'),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => UpgradeScreen(api: w.api))),

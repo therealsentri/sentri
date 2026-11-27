@@ -163,7 +163,7 @@ export class PgAdminActions implements AdminActions {
    * no user-supplied text is ever concatenated into SQL.
    */
   async stats(now: number): Promise<AdminStats> {
-    const trialCutoff = new Date(now - 14 * 86_400_000).toISOString();
+    const trialCutoff = new Date(now - 7 * 86_400_000).toISOString();
     const weekCutoff = now - 7 * 86_400_000;
     const dayCutoff = now - 86_400_000;
     const monthCutoff = new Date(now - 30 * 86_400_000).toISOString();

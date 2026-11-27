@@ -199,14 +199,18 @@ class _TabsState extends State<_Tabs> {
           // The Health tab carries the whole premium suite: heart camera,
           // water reminders, exercise, awards, gyms. Safety tabs stay open.
           if (i == 2 && !PremiumState.freeBuild) {
-            await PremiumState.refresh();
+            // Never freeze a tab tap on a sleeping server, and never let a
+            // timeout escape an async gesture callback.
+            try {
+              await PremiumState.refresh().timeout(const Duration(seconds: 9));
+            } catch (_) {}
+            if (!context.mounted) return;
             if (!PremiumState.instance.premium) {
-              if (!context.mounted) return;
               await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => UpgradeScreen(api: s.api)));
               return;
             }
           }
-          setState(() => _tab = i);
+          if (mounted) setState(() => _tab = i);
         },
       ),
     );

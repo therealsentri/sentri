@@ -60,19 +60,20 @@ class PremiumState extends ChangeNotifier {
     } catch (_) {}
   }
 
-  static Future<void> refresh() {
+  static Future<void> refresh({bool force = false}) {
     if (freeBuild || _api == null) return Future.value();
     final s = instance;
-    // One request at a time, and trust it for at most 60 seconds.
+    // One request at a time, and trust it for at most 60 seconds unless a
+    // payment just finished and we must re-check the server immediately.
     if (s._inFlight != null) return s._inFlight!;
-    if (DateTime.now().difference(s._checkedAt) < const Duration(seconds: 60)) return Future.value();
+    if (!force && DateTime.now().difference(s._checkedAt) < const Duration(seconds: 60)) return Future.value();
     s._inFlight = _doRefresh(s).whenComplete(() => s._inFlight = null);
     return s._inFlight!;
   }
 
   static Future<void> _doRefresh(PremiumState s) async {
     try {
-      final m = await _api!.billingStatus();
+      final m = await _api!.billingStatus().timeout(const Duration(seconds: 8));
       final nextPremium = m['premium'] is bool ? m['premium'] as bool : false;
       final nextPlan = m['plan'] as String? ?? 'free';
       final nextTrial = m['trialEndsAt'] as String?;
@@ -92,7 +93,7 @@ class PremiumState extends ChangeNotifier {
   }
 
   String get label {
-    if (premium && plan == 'free') return '14-day trial';
+    if (premium && plan == 'free') return '7-day trial';
     if (premium) return 'Premium';
     return 'Free';
   }
