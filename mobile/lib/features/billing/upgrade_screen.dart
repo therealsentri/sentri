@@ -35,7 +35,7 @@ class _UpgradeScreenState extends State<UpgradeScreen> with WidgetsBindingObserv
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && mounted) {
-      PremiumState.instance.refresh();
+      PremiumState.refresh();
       widget.api.billingStatus().then((s) {
         if (mounted) setState(() => _current = s['plan'] as String? ?? 'free');
       }).catchError((_) {});

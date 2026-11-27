@@ -25,7 +25,7 @@ Future<void> _boot(ValueNotifier<Widget> holder) async {
   try {
     await BrandPoppins.ensure().catchError((_) {});
     final services = await AppServices.create();
-    PremiumState.bind(services.api);
+    PremiumState.bind(services.api, store: services.store);
     // Never block the first frame on billing; refresh in the background.
     unawaited(PremiumState.refresh());
     holder.value = SentriApp(services: services);

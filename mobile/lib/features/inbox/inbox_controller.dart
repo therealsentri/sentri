@@ -1,14 +1,41 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
 import '../../core/net/api.dart';
+import '../../core/storage/key_value_store.dart';
 
 /// What the message bar and the Messages screen show. Refreshed when the app opens, when a push
 /// arrives, and when the person pulls to refresh.
 class InboxController extends ChangeNotifier {
-  InboxController(this.api, {this.onOver, this.onUrgent});
+  InboxController(this.api, {this.onOver, this.onUrgent, this.store});
   final SentriApi api;
+
+  /// Alerts already received are kept on the phone, so the Messages screen still
+  /// works with no data. A live emergency that was missed while offline rings as
+  /// soon as the connection returns and the server is reconciled.
+  final KeyValueStore? store;
+  static const _cacheKey = 'inbox.cache.v1';
+
+  Future<void> restore() async {
+    final s = store;
+    if (s == null) return;
+    try {
+      final raw = await s.read(_cacheKey);
+      if (raw == null) return;
+      _data = InboxList.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  Future<void> _cache() async {
+    final s = store;
+    if (s == null) return;
+    try {
+      await s.write(_cacheKey, jsonEncode(_data.toJson()));
+    } catch (_) {}
+  }
 
   /// Called for an urgent alert that is no longer waiting for anyone (answered or ended), so its
   /// ringing notification can be removed.
@@ -44,6 +71,7 @@ class InboxController extends ChangeNotifier {
       _data = await api.inbox();
       failed = false;
       failedAuth = false;
+      unawaited(_cache());
       for (final e in _data.items) {
         if (e.urgent && e.state != 'active') unawaited(onOver?.call(e.id));
         // Only recent, still-unanswered emergencies ring again; the push may already have rung this phone.

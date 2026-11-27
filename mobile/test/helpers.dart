@@ -64,9 +64,14 @@ Future<void> settle() async {
 class FakeApi implements SentriApi {
   bool unreachable = false;
   @override
-  Future<Map<String, dynamic>> billingStatus() async => {'plan': 'free', 'expiresAt': null};
+  Future<Map<String, dynamic>> billingStatus() async => {
+        'plan': 'free', 'expiresAt': null, 'premium': true,
+        'trialEndsAt': DateTime.now().add(const Duration(days: 14)).toIso8601String(),
+      };
   @override
   Future<String> billingCheckout(String rail, String plan) async => 'https://example.com/pay';
+  @override
+  Future<bool> ringMyPhone() async => false;
   String locationState = 'active';
   int startCalls = 0;
   final List<String> pins = [];

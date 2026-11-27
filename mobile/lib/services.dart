@@ -132,9 +132,12 @@ class AppServices {
 
     final inbox = InboxController(
       api,
+      store: store,
       onOver: cancelAlertNotification,
       onUrgent: (e) => showAlertNotification({'kind': e.kind, 'text': e.text, 'inboxId': e.id}),
     );
+    // Show already-received alerts immediately, even before the network is back.
+    unawaited(inbox.restore());
     final share = ShareController(api: api, location: location, battery: battery, timers: timers, store: store, dataSaver: () => settings.dataSaver);
 
     final checkin = CheckInController(sos: sos, timers: timers, store: store);

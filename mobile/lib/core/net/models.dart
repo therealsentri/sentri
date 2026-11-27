@@ -31,12 +31,19 @@ class InboxEntry {
         live: j['live'] == true,
         state: const {'active', 'responding', 'ended'}.contains(j['state']) ? j['state'] as String : (j['live'] == true ? 'active' : 'ended'),
       );
+
+  /// Stored on the phone so a person who loses data can still read an alert they already received.
+  Map<String, dynamic> toJson() => {
+        'id': id, 'kind': kind, 'from': from, 'text': text,
+        'at': at.millisecondsSinceEpoch, 'read': read, 'live': live, 'state': state,
+      };
 }
 
 class InboxInvite {
   const InboxInvite({required this.contactId, required this.fromName});
   final String contactId;
   final String? fromName;
+  Map<String, dynamic> toJson() => {'contactId': contactId, 'fromName': fromName};
 }
 
 class InboxList {
@@ -53,6 +60,12 @@ class InboxList {
             if (i is Map && i['contactId'] is String) InboxInvite(contactId: i['contactId'] as String, fromName: i['fromName'] is String ? i['fromName'] as String : null),
         ],
       );
+
+  Map<String, dynamic> toJson() => {
+        'unread': unread,
+        'items': [for (final i in items) i.toJson()],
+        'invites': [for (final i in invites) i.toJson()],
+      };
 }
 
 class InboxDetail {

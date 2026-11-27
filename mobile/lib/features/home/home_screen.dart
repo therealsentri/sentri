@@ -157,7 +157,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     final t = widget.i18n.t;
     return ListenableBuilder(
-      listenable: Listenable.merge([widget.settings, widget.i18n, widget.inbox, widget.share, widget.checkin, widget.profile, widget.sos]),
+      listenable: Listenable.merge([widget.settings, widget.i18n, widget.inbox, widget.share, widget.checkin, widget.profile, widget.sos, PremiumState.instance]),
       builder: (context, _) {
         final s = widget.settings;
         final alarm = Theme.of(context).colorScheme.error;
@@ -225,6 +225,43 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       ),
                     ]),
                   ),
+                  if (!PremiumState.freeBuild)
+                    ListenableBuilder(
+                      listenable: PremiumState.instance,
+                      builder: (context, _) {
+                        final p = PremiumState.instance;
+                        if (!p.premium || p.plan != 'free' || p.trialEndsAt == null) return const SizedBox.shrink();
+                        final end = DateTime.tryParse(p.trialEndsAt!) ?? DateTime.now().add(const Duration(days: 14));
+                        final days = (end.difference(DateTime.now()).inDays + 1).clamp(0, 14);
+                        return Padding(
+                          padding: const EdgeInsets.fromLTRB(22, 4, 22, 0),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(14),
+                              onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => UpgradeScreen(api: widget.api))),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(colors: [Color(0xFF0E08A3), Color(0xFF4334D6)]),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: Row(children: [
+                                  const Icon(Icons.workspace_premium, color: Colors.white, size: 20),
+                                  const SizedBox(width: 10),
+                                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                    const Text('14-day free trial', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
+                                    Text('Full access · $days ${days == 1 ? 'day' : 'days'} left. Keep Premium after the trial.',
+                                        style: const TextStyle(color: Colors.white70, fontSize: 11.5)),
+                                  ])),
+                                  const Icon(Icons.chevron_right, color: Colors.white, size: 18),
+                                ]),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   const SizedBox(height: 16),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 22),
