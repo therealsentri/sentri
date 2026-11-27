@@ -170,7 +170,8 @@ export function registerBillingRoutes(app: FastifyInstance, deps: Deps): Fastify
         headers: { 'x-api-key': key, 'content-type': 'application/json' },
         body: JSON.stringify({
           product_id: CREEM_PRODUCT_ID,
-          customer_email: (req.body as { email?: string }).email || 'buyer@sentri.com.ng',
+          request_id: `${uid}-${Date.now()}`,
+          customer: { email: (req.body as { email?: string }).email || 'buyer@sentri.com.ng' },
           success_url: 'https://sentri.com.ng/?premium=1',
           metadata: { uid, plan },
         }),
