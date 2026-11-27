@@ -378,7 +378,9 @@ class HttpSentriApi implements SentriApi {
             throw ApiUnreachable(StateError('session ended'));
           }
           throw const _SessionUncertain();
-        } else if (r == _Refreshed.unavailable && patient) {
+        } else if (r == _Refreshed.unavailable) {
+          // The session could not be checked: treat as a connection problem for
+          // both ordinary and emergency calls. Never as a logout or a 401.
           throw ApiUnreachable('could not check the session');
         }
       }

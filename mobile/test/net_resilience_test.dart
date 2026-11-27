@@ -152,7 +152,8 @@ void main() {
       final session = _signedIn();
       var expired = 0;
       final api = _api(_Server(forgets), session: session, onExpired: () => expired++);
-      await expectLater(api.submitPin('abc', '1234'), throwsA(isA<ApiHttpError>().having((e) => e.status, 'status', 401)));
+      // An inconclusive session check is a connection problem, never a logout.
+      await expectLater(api.submitPin('abc', '1234'), throwsA(isA<ApiUnreachable>()));
       await Future<void>.delayed(const Duration(milliseconds: 30));
       expect(expired, 0);
       expect(session.signedIn, isTrue);

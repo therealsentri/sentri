@@ -178,7 +178,7 @@ class SosController extends ChangeNotifier {
       if (epoch != _epoch) return;
       _serverOk = true;
       _waiting = false;
-      unawaited(_deletePending());
+      await _deletePending();
       // submitPin() already syncs the duress PIN; don't send it twice.
       notifyListeners();
     } catch (_) {
@@ -258,7 +258,7 @@ class SosController extends ChangeNotifier {
       } on ApiHttpError catch (e) {
         if (epoch != _epoch) return;
         if (e.status == 404) {
-          _resetToIdle(); // the server says this alert is over
+          unawaited(_resetToIdle()); // the server says this alert is over
           return;
         }
         _locFailures++;
@@ -340,7 +340,10 @@ class SosController extends ChangeNotifier {
       // hours (flight mode, dead network, no data) - dropping the marker after 20
       // minutes was how a genuine emergency silently disappeared. The queue is
       // cleared only when the server confirms, or after a day when it is stale.
-      if (age > const Duration(hours: 24)) return unawaited(_deletePending());
+      if (age > const Duration(hours: 24)) {
+        await _deletePending();
+        return;
+      }
       final epoch = ++_epoch;
       _s = SosPhase.active;
       _duress = false;
@@ -354,7 +357,7 @@ class SosController extends ChangeNotifier {
       _startFuture = _tryStart(epoch);
       await _startFuture;
     } catch (_) {
-      unawaited(_deletePending());
+      await _deletePending();
     }
   }
 
@@ -375,7 +378,7 @@ class SosController extends ChangeNotifier {
         return PinUiResult.wrong;
       case PinDecision.cancel:
         final startFuture = _startFuture;
-        _resetToIdle();
+        await _resetToIdle();
         unawaited(_syncPin(epoch, startFuture, pin, config.pinRetries));
         return PinUiResult.cancelled;
       case PinDecision.duress:
@@ -409,7 +412,7 @@ class SosController extends ChangeNotifier {
 
   /// "I'm safe" after a contact responded.
   void dismiss() {
-    if (_s == SosPhase.acknowledged) _resetToIdle();
+    if (_s == SosPhase.acknowledged) unawaited(_resetToIdle());
   }
 
   // ---- teardown ----
@@ -420,7 +423,7 @@ class SosController extends ChangeNotifier {
     _startRetryTimer?.cancel();
   }
 
-  void _resetToIdle() {
+  Future<void> _resetToIdle() async {
     _epoch++;
     _cancelTimers();
     _s = SosPhase.idle;
@@ -429,7 +432,7 @@ class SosController extends ChangeNotifier {
     _waiting = false;
     _serverOk = false;
     _windowEndsAt = null;
-    unawaited(_deletePending());
+    await _deletePending();
     notifyListeners();
   }
 

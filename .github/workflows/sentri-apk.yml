@@ -10,6 +10,8 @@ jobs:
   apk:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+    permissions:
+      contents: write
     defaults:
       run:
         working-directory: mobile
@@ -89,8 +91,15 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -e
           APK=$(ls mobile/build/app/outputs/flutter-apk/*.apk | head -1)
-          gh release upload latest-android "$APK#sentri-latest.apk" --clobber --repo therealsentri/sentri
+          RID=$(gh api repos/therealsentri/sentri/releases/latest --jq .id)
+          OLD=$(gh api "repos/therealsentri/sentri/releases/$RID/assets" --jq '.[] | select(.name=="sentri-latest.apk") | .id')
+          if [ -n "$OLD" ]; then gh api -X DELETE "repos/therealsentri/sentri/releases/assets/$OLD"; fi
+          curl -sS -X POST -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Content-Type: application/vnd.android.package-archive" \
+            --data-binary @"$APK" \
+            "https://uploads.github.com/repos/therealsentri/sentri/releases/$RID/assets?name=sentri-latest.apk" >/dev/null
           echo "Published $APK as sentri-latest.apk"
 
       - name: Show errors on the run page
