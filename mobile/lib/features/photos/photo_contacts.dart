@@ -4032,5 +4032,5 @@ const String _b64 =
     '8CeQFkuO57ieSkkoT2tMEhw4CAgGm53rjjlJJZjd9K+kMa5kclep+GaYdpw8zIbKSS9EfP6h1IpNJaOCCVXrUm7ibzuI+ySS3Xji'
     'KmAIdyQCotexrGtcBcuifokkovyj0tnCDkiV0vSahc28DBgJJKxM/bb/AJb3jH0VIjcSXXhJJK5svrIG3FowuV1B21RGSc/dJJcr'
     '7d8fSxRcTuBxBK0KJLmiTkSkktRnJW1bi0iIs6yi073BggmI3QkkpWotU6r3D5iJgGFIKjgHXmCB+iSSytSEnYYPA/ZV67y2AEkl'
-    'q+mZ7QMd5pgfMQkkkpG6/9k='
+    'q+mZ7QMd5pgfMQkkkpG6/9k=';
 Uint8List get photoContactsBytes => base64Decode(_b64);
