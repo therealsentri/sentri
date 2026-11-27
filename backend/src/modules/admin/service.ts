@@ -233,7 +233,16 @@ export class AdminService {
 
   directory(): Promise<DirectoryRow[]> { return this.actions.listDirectory(); }
   areas(): Promise<AreaRow[]> { return this.actions.listAreas(); }
-  stats(): Promise<AdminStats> { return this.actions.stats(this.clock()); }
+  async stats(): Promise<AdminStats> {
+    const s = await this.actions.stats(this.clock());
+    return {
+      ...s,
+      billing: {
+        ...s.billing,
+        rails: { paystack: !!process.env.PAYSTACK_SECRET_KEY, creem: !!process.env.CREEM_API_KEY },
+      },
+    };
+  }
   async admins(): Promise<AdminSummary[]> {
     return (await this.store.listAdmins()).map((a) => ({ id: a.id, email: a.email, active: !a.disabledAt }));
   }

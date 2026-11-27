@@ -195,6 +195,7 @@ export class PgAdminActions implements AdminActions {
         events30d: events.rows[0]?.n ?? 0,
         revenue: revenue.rows.map((x) => ({ currency: x.currency, amountMinor: Number(x.total) })),
         byPlan: byPlan.rows.map((x) => ({ plan: x.plan, count: x.n })),
+        rails: { paystack: !!process.env.PAYSTACK_SECRET_KEY, creem: !!process.env.CREEM_API_KEY },
       },
     };
   }

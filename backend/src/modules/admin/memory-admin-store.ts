@@ -102,7 +102,7 @@ export class MemoryAdminActions implements AdminActions {
       users: { total: 0, new7d: 0, trialActive: 0, premiumActive: 0 },
       plans: [],
       sos: { last24h: events.filter((e) => e.startedAt > now - 86_400_000).length, active: events.filter((e) => e.state === 'active' || e.state === 'countdown').length },
-      billing: { events30d: 0, revenue: [], byPlan: [] },
+      billing: { events30d: 0, revenue: [], byPlan: [], rails: { paystack: false, creem: false } },
     };
   }
 }

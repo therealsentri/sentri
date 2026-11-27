@@ -91,6 +91,8 @@ export interface AdminStats {
     events30d: number;
     revenue: { currency: string; amountMinor: number }[];
     byPlan: { plan: string; count: number }[];
+    /** Whether the server has keys to start a checkout. No secrets are exposed. */
+    rails: { paystack: boolean; creem: boolean };
   };
 }
 

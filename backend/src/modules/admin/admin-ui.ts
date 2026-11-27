@@ -135,7 +135,10 @@ function statsView(){
         el('div',{class:'panel'},el('h2',null,'Users by plan'),planRows),
         el('div',{class:'panel'},el('h2',null,'Payments · last 30 days'),
           el('div',{class:'row sp small mb10'},el('span',{class:'mute'},s.billing.events30d+' successful payments'),el('span',{class:'mute'},'Updated '+fmt(s.generatedAt))),
-          revRows,el('h2',{class:'mt14'},'Sold by plan'),sold)));
+          revRows,el('h2',{class:'mt14'},'Sold by plan'),sold,
+          el('div',{class:'row small mt14'},el('span',{class:'mute'},'Payment rails:'),
+            el('span',{class:'badge '+(s.billing.rails&&s.billing.rails.paystack?'ok':'bad')},'Paystack '+(s.billing.rails&&s.billing.rails.paystack?'live':'not set up')),
+            el('span',{class:'badge '+(s.billing.rails&&s.billing.rails.creem?'ok':'bad')},'Creem '+(s.billing.rails&&s.billing.rails.creem?'live':'not set up'))))));
   }).catch(fail);
   return el('div',null,box);
 }
